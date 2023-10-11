@@ -1,0 +1,36 @@
+[package]
+name = "messaging-app"
+version = "0.1.0"
+edition = "2021"
+resolver = "2"
+
+[features]
+full = ["dotenv", "http_trace", "http_cors"]
+development = ["dotenv", "http_trace", "http_cors"]
+production = ["http_trace", "http_cors"]
+
+dotenv = ["dep:dotenvy"]
+http_trace = ["tower-http/trace"]
+http_cors = ["tower-http/cors"]
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+
+axum = { version = "0.6", features = ["tracing"] }
+tower-http = { version = "0.4", features = ["normalize-path", "catch-panic"] }
+mime = "0.3"
+
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+thiserror = "1.0"
+
+dotenvy = { version = "0.15", optional = true }
+
+[profile.release]
+panic = "unwind"
+lto = true
+codegen-units = 1
