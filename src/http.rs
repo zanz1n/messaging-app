@@ -5,6 +5,32 @@ use axum::{
 };
 use serde::Serialize;
 
+pub fn marshal_json_string<T: ?Sized + Serialize>(value: &T) -> String {
+    match serde_json::to_string(value) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(error = e.to_string(), "Failed to encode json");
+
+            unsafe { String::from_utf8_unchecked(ENCODING_FAILED_BODY.to_vec()) }
+        }
+    }
+}
+
+pub fn marshal_json_vec<T, R>(value: &T) -> R
+where
+    T: ?Sized + Serialize,
+    R: From<Vec<u8>>,
+{
+    match serde_json::to_vec(value) {
+        Ok(v) => R::from(v),
+        Err(e) => {
+            tracing::error!(error = e.to_string(), "Failed to encode json");
+
+            R::from(ENCODING_FAILED_BODY.to_vec())
+        }
+    }
+}
+
 pub trait ApiResponder {
     fn http_code(&self) -> StatusCode {
         StatusCode::OK
