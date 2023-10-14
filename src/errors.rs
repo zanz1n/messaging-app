@@ -1,11 +1,10 @@
+use crate::ENCODING_FAILED_BODY;
 use axum::{
     body::BoxBody,
     http::{header, HeaderValue, Response, StatusCode},
     response::IntoResponse,
 };
 use serde::Serialize;
-
-use crate::ENCODING_FAILED_BODY;
 
 #[derive(Debug, Serialize)]
 pub struct ErrorBody {
@@ -23,19 +22,44 @@ impl ErrorBody {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum ApiError<'a> {
     #[error("Server service panicked: {0:?}")]
     ServicePanicked(Option<&'a str>),
+    #[error("Websocket packets must be sent every {0} seconds")]
+    /// The amount of seconds between a packet acknowledgement
+    WebsocketTimeout(u64),
+    #[error("The received message does not contain valid utf8 characters")]
+    WebsocketMessageNonUTF8,
+    #[error("The received message could not be deserialized: {0}")]
+    WebsocketMessageDeserializationFailed(String),
     #[error("Something went wrong: {0}")]
     CustomServerError(&'a str),
+}
+
+impl<'a> Serialize for ApiError<'a> {
+    #[inline]
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        ErrorBody {
+            error_code: self.into(),
+            message: self.to_string(),
+        }
+        .serialize(serializer)
+    }
 }
 
 impl<'a> Into<StatusCode> for &ApiError<'a> {
     fn into(self) -> StatusCode {
         match self {
-            ApiError::CustomServerError(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ApiError::ServicePanicked(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            ApiError::CustomServerError(_) | ApiError::ServicePanicked(_) => {
+                StatusCode::INTERNAL_SERVER_ERROR
+            }
+            ApiError::WebsocketTimeout(_) => StatusCode::REQUEST_TIMEOUT,
+            ApiError::WebsocketMessageDeserializationFailed(_)
+            | ApiError::WebsocketMessageNonUTF8 => StatusCode::BAD_REQUEST,
         }
     }
 }
@@ -45,6 +69,9 @@ impl<'a> Into<u32> for &ApiError<'a> {
         match self {
             ApiError::CustomServerError(_) => 50000,
             ApiError::ServicePanicked(_) => 50001,
+            ApiError::WebsocketTimeout(_) => 40801,
+            ApiError::WebsocketMessageNonUTF8 => 40001,
+            ApiError::WebsocketMessageDeserializationFailed(_) => 40002,
         }
     }
 }
