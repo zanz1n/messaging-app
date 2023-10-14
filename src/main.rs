@@ -1,11 +1,16 @@
 mod errors;
+mod gateway;
 mod http;
 mod setup;
 
-use crate::setup::{env_param, JsonPanicHandler};
+use crate::{
+    gateway::handlers::ws_upgrader,
+    setup::{env_param, JsonPanicHandler},
+};
 use axum::{routing, Router, Server};
 use std::{error::Error, net::SocketAddr};
 use tower_http::{catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer};
+use tracing_subscriber::EnvFilter;
 
 pub type BoxedError = Box<dyn Error + Send + Sync>;
 
@@ -17,15 +22,23 @@ async fn get_root() {}
 #[tokio::main]
 async fn main() -> Result<(), BoxedError> {
     #[cfg(feature = "dotenv")]
-    {
-        use crate::setup::VarError;
-        dotenvy::dotenv().map_err(|_| VarError::DotenvFileNotFound)?;
-    }
-    tracing_subscriber::fmt::try_init()?;
+    dotenvy::dotenv().map_err(|_| crate::setup::VarError::DotenvFileNotFound)?;
+
+    #[cfg(feature = "json_log")]
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .json()
+        .try_init()?;
+
+    #[cfg(not(feature = "json_log"))]
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env())
+        .try_init()?;
 
     let port = env_param("APP_PORT").unwrap_or(8080_u16);
 
     let mut app = Router::new()
+        .route("/gateway", routing::get(ws_upgrader))
         .route("/", routing::get(get_root))
         .route("/", routing::post(get_root));
 
