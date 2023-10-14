@@ -5,26 +5,28 @@ edition = "2021"
 resolver = "2"
 
 [features]
-full = ["dotenv", "http_trace", "http_cors"]
+full = ["dotenv", "http_trace", "http_cors", "json_log"]
 development = ["dotenv", "http_trace", "http_cors"]
-production = ["http_trace", "http_cors"]
+production = ["http_trace", "http_cors", "json_log"]
 
 dotenv = ["dep:dotenvy"]
 http_trace = ["tower-http/trace"]
 http_cors = ["tower-http/cors"]
+json_log = ["tracing-subscriber/json"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 
-axum = { version = "0.6", features = ["tracing"] }
+axum = { version = "0.6", features = ["tracing", "ws"] }
 tower-http = { version = "0.4", features = ["normalize-path", "catch-panic"] }
+tokio-tungstenite = "0.20"
 mime = "0.3"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
 tracing = "0.1"
-tracing-subscriber = "0.3"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 thiserror = "1.0"
 
