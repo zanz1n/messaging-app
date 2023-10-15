@@ -26,15 +26,20 @@ impl ErrorBody {
 pub enum ApiError<'a> {
     #[error("Server service panicked: {0:?}")]
     ServicePanicked(Option<&'a str>),
+
     #[error("Websocket packets must be sent every {0} seconds")]
     /// The amount of seconds between a packet acknowledgement
-    WebsocketTimeout(u64),
+    GatewayTimeout(u64),
     #[error("The received message does not contain valid utf8 characters")]
-    WebsocketMessageNonUTF8,
+    GatewayMessageNonUTF8,
     #[error("The received message could not be deserialized: {0}")]
-    WebsocketMessageDeserializationFailed(String),
-    #[error("Something went wrong: {0}")]
-    CustomServerError(&'a str),
+    /// The serde deserialization error string
+    GatewayDeserializationFailed(String),
+
+    #[error("The message could not be found")]
+    MessageNotFound,
+    #[error("Failed to fetch the message")]
+    MessageFetchFailed,
 }
 
 impl<'a> Serialize for ApiError<'a> {
@@ -54,12 +59,14 @@ impl<'a> Serialize for ApiError<'a> {
 impl<'a> Into<StatusCode> for &ApiError<'a> {
     fn into(self) -> StatusCode {
         match self {
-            ApiError::CustomServerError(_) | ApiError::ServicePanicked(_) => {
+            ApiError::ServicePanicked(_) | ApiError::MessageFetchFailed => {
                 StatusCode::INTERNAL_SERVER_ERROR
             }
-            ApiError::WebsocketTimeout(_) => StatusCode::REQUEST_TIMEOUT,
-            ApiError::WebsocketMessageDeserializationFailed(_)
-            | ApiError::WebsocketMessageNonUTF8 => StatusCode::BAD_REQUEST,
+            ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
+            ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
+                StatusCode::BAD_REQUEST
+            }
+            ApiError::MessageNotFound => StatusCode::NOT_FOUND,
         }
     }
 }
@@ -67,11 +74,12 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
 impl<'a> Into<u32> for &ApiError<'a> {
     fn into(self) -> u32 {
         match self {
-            ApiError::CustomServerError(_) => 50000,
             ApiError::ServicePanicked(_) => 50001,
-            ApiError::WebsocketTimeout(_) => 40801,
-            ApiError::WebsocketMessageNonUTF8 => 40001,
-            ApiError::WebsocketMessageDeserializationFailed(_) => 40002,
+            ApiError::GatewayTimeout(_) => 40801,
+            ApiError::GatewayMessageNonUTF8 => 40001,
+            ApiError::GatewayDeserializationFailed(_) => 40002,
+            ApiError::MessageNotFound => 40401,
+            ApiError::MessageFetchFailed => 50002,
         }
     }
 }
