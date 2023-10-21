@@ -36,6 +36,15 @@ pub enum ApiError<'a> {
     /// The serde deserialization error string
     GatewayDeserializationFailed(String),
 
+    #[error("Something went wrong")]
+    CacheGetFailed,
+    #[error("Something went wrong")]
+    CacheSetFailed,
+    #[error("Something went wrong")]
+    CacheDeserializationFailed,
+    #[error("Something went wrong")]
+    CacheSerializationFailed,
+
     #[error("The message could not be found")]
     MessageNotFound,
     #[error("Failed to fetch the message")]
@@ -75,7 +84,11 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
             ApiError::ServicePanicked(_)
             | ApiError::MessageFetchFailed
             | ApiError::AuthTokenGenerationFailed
-            | ApiError::UserFetchFailed => StatusCode::INTERNAL_SERVER_ERROR,
+            | ApiError::UserFetchFailed
+            | ApiError::CacheGetFailed
+            | ApiError::CacheSetFailed
+            | ApiError::CacheDeserializationFailed
+            | ApiError::CacheSerializationFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
                 StatusCode::BAD_REQUEST
@@ -93,6 +106,10 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
 impl<'a> Into<u32> for &ApiError<'a> {
     fn into(self) -> u32 {
         match self {
+            ApiError::CacheGetFailed
+            | ApiError::CacheSetFailed
+            | ApiError::CacheDeserializationFailed
+            | ApiError::CacheSerializationFailed => 50000,
             ApiError::ServicePanicked(_) => 50001,
             ApiError::GatewayTimeout(_) => 40801,
             ApiError::GatewayMessageNonUTF8 => 40001,
