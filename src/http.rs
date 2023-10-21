@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-pub fn marshal_json_string<T: ?Sized + Serialize>(value: &T) -> String {
+pub fn marshal_json_string<T: Serialize>(value: &T) -> String {
     match serde_json::to_string(value) {
         Ok(v) => v,
         Err(e) => {
@@ -16,11 +16,7 @@ pub fn marshal_json_string<T: ?Sized + Serialize>(value: &T) -> String {
     }
 }
 
-pub fn marshal_json_vec<T, R>(value: &T) -> R
-where
-    T: ?Sized + Serialize,
-    R: From<Vec<u8>>,
-{
+pub fn marshal_json_vec<T: Serialize, R: From<Vec<u8>>>(value: &T) -> R {
     match serde_json::to_vec(value) {
         Ok(v) => R::from(v),
         Err(e) => {
