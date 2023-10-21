@@ -4,7 +4,7 @@ use axum::{
     http::{header, HeaderValue, Response, StatusCode},
     response::IntoResponse,
 };
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 
 #[derive(Debug, Serialize)]
 pub struct ErrorBody {
@@ -40,14 +40,18 @@ pub enum ApiError<'a> {
     MessageNotFound,
     #[error("Failed to fetch the message")]
     MessageFetchFailed,
+
+    #[error("The user could not be found")]
+    UserNotFound,
+    #[error("Failed to fetch the user")]
+    UserFetchFailed,
+    #[error("The user already exists")]
+    UserAlreadyExists,
 }
 
 impl<'a> Serialize for ApiError<'a> {
     #[inline]
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         ErrorBody {
             error_code: self.into(),
             message: self.to_string(),
@@ -59,13 +63,16 @@ impl<'a> Serialize for ApiError<'a> {
 impl<'a> Into<StatusCode> for &ApiError<'a> {
     fn into(self) -> StatusCode {
         match self {
-            ApiError::ServicePanicked(_) | ApiError::MessageFetchFailed => {
-                StatusCode::INTERNAL_SERVER_ERROR
-            }
+            ApiError::ServicePanicked(_)
+            | ApiError::MessageFetchFailed
+            | ApiError::UserFetchFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
                 StatusCode::BAD_REQUEST
             }
+            ApiError::UserAlreadyExists => StatusCode::CONFLICT,
+
+            ApiError::UserNotFound => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
         }
     }
@@ -80,6 +87,9 @@ impl<'a> Into<u32> for &ApiError<'a> {
             ApiError::GatewayDeserializationFailed(_) => 40002,
             ApiError::MessageNotFound => 40401,
             ApiError::MessageFetchFailed => 50002,
+            ApiError::UserNotFound => 40402,
+            ApiError::UserFetchFailed => 50003,
+            ApiError::UserAlreadyExists => 40901,
         }
     }
 }
