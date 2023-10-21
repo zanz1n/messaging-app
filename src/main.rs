@@ -1,4 +1,5 @@
 mod auth;
+mod cache;
 mod errors;
 mod gateway;
 mod http;
