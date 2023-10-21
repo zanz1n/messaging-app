@@ -47,6 +47,15 @@ pub enum ApiError<'a> {
     UserFetchFailed,
     #[error("The user already exists")]
     UserAlreadyExists,
+
+    #[error("The provided auth token is invalid")]
+    AuthTokenInvalid,
+    #[error("The provided auth token is expired")]
+    AuthTokenExpired,
+    #[error("The provided refresh token is invalid")]
+    AuthRefreshTokenInvalid,
+    #[error("Failed to generate the authentication token")]
+    AuthTokenGenerationFailed,
 }
 
 impl<'a> Serialize for ApiError<'a> {
@@ -65,14 +74,17 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
         match self {
             ApiError::ServicePanicked(_)
             | ApiError::MessageFetchFailed
+            | ApiError::AuthTokenGenerationFailed
             | ApiError::UserFetchFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
                 StatusCode::BAD_REQUEST
             }
             ApiError::UserAlreadyExists => StatusCode::CONFLICT,
-
-            ApiError::UserNotFound => StatusCode::UNAUTHORIZED,
+            ApiError::AuthTokenInvalid
+            | ApiError::UserNotFound
+            | ApiError::AuthTokenExpired
+            | ApiError::AuthRefreshTokenInvalid => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
         }
     }
@@ -90,6 +102,10 @@ impl<'a> Into<u32> for &ApiError<'a> {
             ApiError::UserNotFound => 40402,
             ApiError::UserFetchFailed => 50003,
             ApiError::UserAlreadyExists => 40901,
+            ApiError::AuthTokenInvalid => 40101,
+            ApiError::AuthTokenExpired => 40102,
+            ApiError::AuthRefreshTokenInvalid => 40103,
+            ApiError::AuthTokenGenerationFailed => 50004,
         }
     }
 }
