@@ -7,18 +7,46 @@ use axum::{
 use serde::{Serialize, Serializer};
 
 #[derive(Debug, Serialize)]
-pub struct ErrorBody {
+pub struct ErrorResponse {
     pub message: String,
     pub error_code: u32,
+    #[serde(skip_serializing)]
+    pub status_code: StatusCode,
 }
 
-impl ErrorBody {
+impl ErrorResponse {
     #[inline]
-    pub fn new(message: String, error_code: u32) -> Self {
+    pub fn new(message: String, error_code: u32, status_code: StatusCode) -> Self {
         Self {
             message,
             error_code,
+            status_code,
         }
+    }
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let tuple = match serde_json::to_vec(&self) {
+            Ok(buf) => (
+                self.status_code,
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
+                )],
+                buf,
+            ),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
+                )],
+                ENCODING_FAILED_BODY.to_vec(),
+            ),
+        };
+
+        tuple.into_response()
     }
 }
 
@@ -74,15 +102,12 @@ pub enum ApiError<'a> {
 impl<'a> Serialize for ApiError<'a> {
     #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        ErrorBody {
-            error_code: self.into(),
-            message: self.to_string(),
-        }
-        .serialize(serializer)
+        Into::<ErrorResponse>::into(self).serialize(serializer)
     }
 }
 
 impl<'a> Into<StatusCode> for &ApiError<'a> {
+    #[inline]
     fn into(self) -> StatusCode {
         match self {
             ApiError::ServicePanicked(_)
@@ -110,6 +135,7 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
 }
 
 impl<'a> Into<u32> for &ApiError<'a> {
+    #[inline]
     fn into(self) -> u32 {
         match self {
             ApiError::CacheGetFailed
@@ -135,29 +161,20 @@ impl<'a> Into<u32> for &ApiError<'a> {
     }
 }
 
+impl<'a> Into<ErrorResponse> for &ApiError<'a> {
+    #[inline]
+    fn into(self) -> ErrorResponse {
+        ErrorResponse {
+            error_code: self.into(),
+            status_code: self.into(),
+            message: self.to_string(),
+        }
+    }
+}
+
 impl<'a> IntoResponse for ApiError<'a> {
+    #[inline]
     fn into_response(self) -> Response<BoxBody> {
-        let err_body = ErrorBody::new(self.to_string(), (&self).into());
-
-        let tuple = match serde_json::to_vec(&err_body) {
-            Ok(buf) => (
-                (&self).into(),
-                [(
-                    header::CONTENT_TYPE,
-                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
-                )],
-                buf,
-            ),
-            Err(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                [(
-                    header::CONTENT_TYPE,
-                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
-                )],
-                ENCODING_FAILED_BODY.to_vec(),
-            ),
-        };
-
-        tuple.into_response()
+        ErrorResponse::new(self.to_string(), (&self).into(), (&self).into()).into_response()
     }
 }
