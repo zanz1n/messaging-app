@@ -2,9 +2,7 @@ use super::{
     models::{InvalidationReason, UserAuthPayload, UserInvalidationPayload},
     repository::AuthRepository,
 };
-use crate::{
-    cache::repository::CacheRepository, errors::ApiError, user::repository::UserRepository,
-};
+use crate::{cache::repository::CacheRepository, errors::ApiError};
 use async_trait::async_trait;
 use base64::{engine::general_purpose, Engine};
 use chrono::Utc;
@@ -13,7 +11,7 @@ use rand::Rng;
 use uuid::Uuid;
 
 #[derive(Clone)]
-pub struct JwtAuthRepository<C: CacheRepository + Clone, U: UserRepository + Clone> {
+pub struct JwtAuthRepository<C: CacheRepository + Clone> {
     enc_key: EncodingKey,
     dec_key: DecodingKey,
     validation: Validation,
@@ -22,13 +20,11 @@ pub struct JwtAuthRepository<C: CacheRepository + Clone, U: UserRepository + Clo
     token_duration: u64,
 
     cache_repo: C,
-    user_repo: U,
 }
 
-impl<C, U> JwtAuthRepository<C, U>
+impl<C> JwtAuthRepository<C>
 where
     C: CacheRepository + Clone,
-    U: UserRepository + Clone,
 {
     pub fn new(
         algo: Algorithm,
@@ -36,7 +32,6 @@ where
         dec_key: DecodingKey,
         token_duration: u64,
         cache_repo: C,
-        user_repo: U,
     ) -> Self {
         let validation = Validation::new(algo);
 
@@ -47,16 +42,14 @@ where
             algo,
             token_duration,
             cache_repo,
-            user_repo,
         }
     }
 }
 
 #[async_trait]
-impl<C, U> AuthRepository for JwtAuthRepository<C, U>
+impl<C> AuthRepository for JwtAuthRepository<C>
 where
     C: CacheRepository + Clone,
-    U: UserRepository + Clone,
 {
     async fn auth_user(&self, token: String) -> Result<UserAuthPayload, ApiError> {
         let token = jsonwebtoken::decode(&token, &self.dec_key, &self.validation).map_err(|e| {
@@ -69,14 +62,15 @@ where
         Ok(token.claims)
     }
 
-    async fn login_user(&self, email: String, password: String) -> Result<String, ApiError> {
-        let user = self
-            .user_repo
-            .get_by_email(email)
-            .await?
-            .ok_or(ApiError::AuthFailed)?;
-
-        let b = tokio::task::spawn_blocking(move || bcrypt::verify(password, &user.password))
+    async fn login_user(
+        &self,
+        user_id: Uuid,
+        username: String,
+        user_email: String,
+        user_password: String,
+        password: String,
+    ) -> Result<String, ApiError> {
+        let b = tokio::task::spawn_blocking(move || bcrypt::verify(password, &user_password))
             .await
             .or(Err(ApiError::AuthBcryptHashFailed))?
             .or(Err(ApiError::AuthBcryptHashFailed))?;
@@ -85,8 +79,7 @@ where
             return Err(ApiError::AuthFailed);
         }
 
-        self.generate_token(user.id, user.username, user.email)
-            .await
+        self.generate_token(user_id, username, user_email).await
     }
 
     async fn get_refresh_token(&self, user_id: Uuid) -> Result<String, ApiError> {
@@ -105,23 +98,8 @@ where
         Ok(rt)
     }
 
-    async fn refresh_session(&self, refresh_token: String) -> Result<String, ApiError> {
-        let user_id =
-            extract_rf_token_id(&refresh_token).ok_or(ApiError::AuthRefreshTokenInvalid)?;
-
-        let c = self.get_refresh_token(user_id).await?;
-        if c != refresh_token {
-            return Err(ApiError::AuthRefreshTokenInvalid);
-        }
-
-        let user = self
-            .user_repo
-            .get_by_id(user_id)
-            .await?
-            .ok_or(ApiError::AuthRefreshTokenInvalid)?;
-
-        self.generate_token(user.id, user.username, user.email)
-            .await
+    async fn parse_refresh_token(&self, token: String) -> Result<Uuid, ApiError> {
+        extract_rf_token_id(&token).ok_or(ApiError::AuthRefreshTokenInvalid)
     }
 
     async fn generate_token(

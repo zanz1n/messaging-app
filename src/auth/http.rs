@@ -57,7 +57,6 @@ mod tests {
             repository::AuthRepository,
         },
         cache::memory_repository::InMemoryCacheRepository,
-        user::memory_repository::InMemoryUserRepository,
     };
     use axum::{
         body::Body,
@@ -67,8 +66,7 @@ mod tests {
     use std::time::Duration;
     use uuid::Uuid;
 
-    type InMemoryAuthRepository =
-        JwtAuthRepository<InMemoryCacheRepository, InMemoryUserRepository>;
+    type InMemoryAuthRepository = JwtAuthRepository<InMemoryCacheRepository>;
 
     async fn mock_must_success_req(
         ar: InMemoryAuthRepository,
@@ -131,7 +129,6 @@ mod tests {
             DecodingKey::from_base64_secret(RANDOM_BASE64_STRING).unwrap(),
             3,
             InMemoryCacheRepository::new(),
-            InMemoryUserRepository::new(),
         );
 
         let token = ar
