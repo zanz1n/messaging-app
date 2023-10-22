@@ -1,4 +1,3 @@
-use crate::user::models::User;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -30,11 +29,6 @@ pub enum InvalidationReason {
 }
 
 impl UserAuthPayload {
-    #[inline]
-    pub fn from_user(&self, user: &User, duration: u64) -> Self {
-        Self::new(user.id, user.username.clone(), user.email.clone(), duration)
-    }
-
     pub fn new(user_id: Uuid, username: String, email: String, duration: u64) -> Self {
         let now = Utc::now()
             .timestamp()
