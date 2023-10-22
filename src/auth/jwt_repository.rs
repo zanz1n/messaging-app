@@ -69,6 +69,26 @@ where
         Ok(token.claims)
     }
 
+    async fn login_user(&self, email: String, password: String) -> Result<String, ApiError> {
+        let user = self
+            .user_repo
+            .get_by_email(email)
+            .await?
+            .ok_or(ApiError::AuthFailed)?;
+
+        let b = tokio::task::spawn_blocking(move || bcrypt::verify(password, &user.password))
+            .await
+            .or(Err(ApiError::AuthBcryptHashFailed))?
+            .or(Err(ApiError::AuthBcryptHashFailed))?;
+
+        if !b {
+            return Err(ApiError::AuthFailed);
+        }
+
+        self.generate_token(user.id, user.username, user.email)
+            .await
+    }
+
     async fn get_refresh_token(&self, user_id: Uuid) -> Result<String, ApiError> {
         let key = format!("refresh_token/{user_id}");
 
@@ -76,9 +96,9 @@ where
         let rt = match rt {
             Some(v) => v,
             None => {
-                let token = generate_rf_token(user_id);
-                self.cache_repo.set(key, token.clone()).await?;
-                token
+                let value = generate_rf_token(user_id);
+                self.cache_repo.set(key, value.clone()).await?;
+                value
             }
         };
 
@@ -90,7 +110,6 @@ where
             extract_rf_token_id(&refresh_token).ok_or(ApiError::AuthRefreshTokenInvalid)?;
 
         let c = self.get_refresh_token(user_id).await?;
-
         if c != refresh_token {
             return Err(ApiError::AuthRefreshTokenInvalid);
         }

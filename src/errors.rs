@@ -57,6 +57,8 @@ pub enum ApiError<'a> {
     #[error("The user already exists")]
     UserAlreadyExists,
 
+    #[error("User not found or password do now match")]
+    AuthFailed,
     #[error("The provided auth token is invalid")]
     AuthTokenInvalid,
     #[error("The provided auth token is expired")]
@@ -65,6 +67,8 @@ pub enum ApiError<'a> {
     AuthRefreshTokenInvalid,
     #[error("Failed to generate the authentication token")]
     AuthTokenGenerationFailed,
+    #[error("Something went wrong")]
+    AuthBcryptHashFailed,
 }
 
 impl<'a> Serialize for ApiError<'a> {
@@ -88,13 +92,15 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
             | ApiError::CacheGetFailed
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
-            | ApiError::CacheSerializationFailed => StatusCode::INTERNAL_SERVER_ERROR,
+            | ApiError::CacheSerializationFailed
+            | ApiError::AuthBcryptHashFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
                 StatusCode::BAD_REQUEST
             }
             ApiError::UserAlreadyExists => StatusCode::CONFLICT,
-            ApiError::AuthTokenInvalid
+            ApiError::AuthFailed
+            | ApiError::AuthTokenInvalid
             | ApiError::UserNotFound
             | ApiError::AuthTokenExpired
             | ApiError::AuthRefreshTokenInvalid => StatusCode::UNAUTHORIZED,
@@ -109,7 +115,8 @@ impl<'a> Into<u32> for &ApiError<'a> {
             ApiError::CacheGetFailed
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
-            | ApiError::CacheSerializationFailed => 50000,
+            | ApiError::CacheSerializationFailed
+            | ApiError::AuthBcryptHashFailed => 50000,
             ApiError::ServicePanicked(_) => 50001,
             ApiError::GatewayTimeout(_) => 40801,
             ApiError::GatewayMessageNonUTF8 => 40001,
@@ -119,9 +126,10 @@ impl<'a> Into<u32> for &ApiError<'a> {
             ApiError::UserNotFound => 40402,
             ApiError::UserFetchFailed => 50003,
             ApiError::UserAlreadyExists => 40901,
-            ApiError::AuthTokenInvalid => 40101,
-            ApiError::AuthTokenExpired => 40102,
-            ApiError::AuthRefreshTokenInvalid => 40103,
+            ApiError::AuthFailed => 40101,
+            ApiError::AuthTokenInvalid => 40102,
+            ApiError::AuthTokenExpired => 40103,
+            ApiError::AuthRefreshTokenInvalid => 40104,
             ApiError::AuthTokenGenerationFailed => 50004,
         }
     }
