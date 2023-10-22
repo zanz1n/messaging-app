@@ -34,7 +34,7 @@ pub enum ApiError<'a> {
     GatewayMessageNonUTF8,
     #[error("The received message could not be deserialized: {0}")]
     /// The serde deserialization error string
-    GatewayDeserializationFailed(String),
+    GatewayDeserializationFailed(&'a str),
 
     #[error("Something went wrong")]
     CacheGetFailed,

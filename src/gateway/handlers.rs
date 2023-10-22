@@ -124,7 +124,7 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
                 Ok(v) => v,
                 Err(e) => match send_message(
                     &mut socket,
-                    &GatewayEvent::Error(ApiError::GatewayDeserializationFailed(e.to_string())),
+                    &GatewayEvent::Error(ApiError::GatewayDeserializationFailed(&e.to_string())),
                 )
                 .await
                 {
