@@ -16,7 +16,7 @@ pub struct InMemoryCacheRepository {
 
 impl InMemoryCacheRepository {
     async fn background(self) {
-        const INTERVAL: Duration = Duration::from_secs(5);
+        const INTERVAL: Duration = Duration::from_secs(2);
 
         let mut exclusion = Vec::new();
         loop {
@@ -30,15 +30,19 @@ impl InMemoryCacheRepository {
                 }
             }
 
-            let mut cache = self.cache.lock().await;
-            for e in exclusion.iter() {
-                cache.remove(e);
-                expiry.remove(e);
+            if exclusion.len() != 0 {
+                let mut cache = self.cache.lock().await;
+                for e in exclusion.iter() {
+                    cache.remove(e);
+                    expiry.remove(e);
+                }
+                drop(cache);
             }
-            drop(cache);
             drop(expiry);
 
             exclusion.clear();
+
+            tokio::time::sleep(INTERVAL).await;
         }
     }
 
