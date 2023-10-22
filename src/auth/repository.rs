@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use uuid::Uuid;
 
 #[async_trait]
-pub trait AuthRepository {
+pub trait AuthRepository: Sync + Send {
     async fn auth_user(&self, token: String) -> Result<UserAuthPayload, ApiError>;
 
     async fn login_user(&self, email: String, password: String) -> Result<String, ApiError>;
