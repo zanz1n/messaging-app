@@ -212,10 +212,9 @@ fn extract_rf_token_id(s: &str) -> Option<Uuid> {
 }
 
 #[cfg(test)]
-mod test {
-    use uuid::Uuid;
-
+mod tests {
     use super::{extract_rf_token_id, generate_rf_token};
+    use uuid::Uuid;
 
     #[test]
     fn test_generate_token() {
