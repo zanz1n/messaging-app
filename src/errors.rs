@@ -85,6 +85,10 @@ pub enum ApiError<'a> {
     #[error("The user already exists")]
     UserAlreadyExists,
 
+    #[error("Authorization is required but the 'Authorization' header was not provided")]
+    AuthHeaderMissing,
+    #[error("Authorization is required but the 'Authorization' header is invalid")]
+    AuthHeaderInvalid,
     #[error("User not found or password do now match")]
     AuthFailed,
     #[error("The provided auth token is invalid")]
@@ -97,6 +101,8 @@ pub enum ApiError<'a> {
     AuthTokenGenerationFailed,
     #[error("Something went wrong")]
     AuthBcryptHashFailed,
+    #[error("The user is under invalidation, please login again later")]
+    AuthUserInvalidated,
 }
 
 impl<'a> Serialize for ApiError<'a> {
@@ -124,11 +130,14 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
                 StatusCode::BAD_REQUEST
             }
             ApiError::UserAlreadyExists => StatusCode::CONFLICT,
-            ApiError::AuthFailed
+            ApiError::AuthHeaderMissing
+            | ApiError::AuthHeaderInvalid
+            | ApiError::AuthFailed
             | ApiError::AuthTokenInvalid
             | ApiError::UserNotFound
             | ApiError::AuthTokenExpired
-            | ApiError::AuthRefreshTokenInvalid => StatusCode::UNAUTHORIZED,
+            | ApiError::AuthRefreshTokenInvalid
+            | ApiError::AuthUserInvalidated => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
         }
     }
@@ -152,10 +161,13 @@ impl<'a> Into<u32> for &ApiError<'a> {
             ApiError::UserNotFound => 40402,
             ApiError::UserFetchFailed => 50003,
             ApiError::UserAlreadyExists => 40901,
-            ApiError::AuthFailed => 40101,
-            ApiError::AuthTokenInvalid => 40102,
-            ApiError::AuthTokenExpired => 40103,
-            ApiError::AuthRefreshTokenInvalid => 40104,
+            ApiError::AuthHeaderMissing => 40101,
+            ApiError::AuthHeaderInvalid => 40102,
+            ApiError::AuthFailed => 40103,
+            ApiError::AuthTokenInvalid => 40104,
+            ApiError::AuthTokenExpired => 40105,
+            ApiError::AuthRefreshTokenInvalid => 40106,
+            ApiError::AuthUserInvalidated => 40107,
             ApiError::AuthTokenGenerationFailed => 50004,
         }
     }
@@ -169,6 +181,13 @@ impl<'a> Into<ErrorResponse> for &ApiError<'a> {
             status_code: self.into(),
             message: self.to_string(),
         }
+    }
+}
+
+impl<'a> Into<ErrorResponse> for ApiError<'a> {
+    #[inline]
+    fn into(self) -> ErrorResponse {
+        (&self).into()
     }
 }
 
