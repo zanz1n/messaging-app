@@ -1,42 +1,44 @@
 use crate::{
     errors::ApiError,
-    gateway::models::{GatewayMessage, IncommingMessage, MessagePayload},
+    gateway::models::{GatewayEvent, IncommingMessage},
     http::marshal_json_string,
+    message::models::Message,
 };
 use axum::{
     extract::{
-        ws::{Message, WebSocket},
-        WebSocketUpgrade,
+        ws::{Message as WsMessage, WebSocket},
+        ConnectInfo, WebSocketUpgrade,
     },
     response::IntoResponse,
     Error,
 };
+use chrono::Utc;
 use serde::Serialize;
 use std::{
-    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
+    net::SocketAddr,
     time::{Duration, Instant},
 };
 use tokio::{sync::broadcast::channel, time::sleep};
+use uuid::Uuid;
 
 pub async fn ws_upgrader(
+    ConnectInfo(addr): ConnectInfo<SocketAddr>,
     ws: WebSocketUpgrade,
-    // ConnectInfo(addr): ConnectInfo<SocketAddr>,
 ) -> impl IntoResponse {
-    let addr = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 33333));
     ws.on_upgrade(move |socket| ws_handler(socket, addr))
 }
 
 async fn send_message<T: Serialize>(ws: &mut WebSocket, value: &T) -> Result<(), Error> {
-    ws.send(Message::Text(marshal_json_string(value))).await
+    ws.send(WsMessage::Text(marshal_json_string(value))).await
 }
 
 pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
-    const SOCKET_TIMEOUT: Duration = Duration::from_secs(10);
-    const SOCKET_TICK_CHECK: Duration = Duration::from_secs(7);
+    const SOCKET_TIMEOUT: Duration = Duration::from_secs(30);
+    const SOCKET_TICK_CHECK: Duration = Duration::from_secs(5);
 
     tracing::info!(addr = addr.to_string(), "Incomming gateway connection");
 
-    let (sender, mut receiver) = channel(10);
+    let (sender, mut receiver) = channel::<GatewayEvent>(10);
     let mut last_ping = Instant::now();
 
     tokio::spawn(async move {
@@ -45,19 +47,17 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
             id += 1;
             sleep(Duration::from_secs(3)).await;
 
-            let content = id.to_string();
+            let now = Utc::now();
 
-            let res = sender
-                .send(GatewayMessage::MessageCreated(MessagePayload {
-                    id,
-                    content,
-                }))
-                .map_err(|e| {
-                    tracing::error!(
-                        error = e.to_string(),
-                        "Failed to send message on tokio channel"
-                    );
-                });
+            let res = sender.send(GatewayEvent::MessageCreated(Message {
+                id: Uuid::new_v4(),
+                channel_id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                created_at: now,
+                updated_at: now,
+                content: Some(id.to_string()),
+                image: None,
+            }));
 
             if res.is_err() {
                 break;
@@ -99,8 +99,8 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
         };
 
         if Instant::now() - last_ping > SOCKET_TIMEOUT {
-            let e = ApiError::WebsocketTimeout(SOCKET_TIMEOUT.as_secs());
-            match send_message(&mut socket, &GatewayMessage::Error(e)).await {
+            let e = ApiError::GatewayTimeout(SOCKET_TIMEOUT.as_secs());
+            match send_message(&mut socket, &GatewayEvent::Error(e)).await {
                 Ok(_) => break Ok(()),
                 Err(e) => break Err(e),
             }
@@ -111,7 +111,7 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
                 Ok(s) => s,
                 Err(_) => match send_message(
                     &mut socket,
-                    &GatewayMessage::Error(ApiError::WebsocketMessageNonUTF8),
+                    &GatewayEvent::Error(ApiError::GatewayMessageNonUTF8),
                 )
                 .await
                 {
@@ -124,9 +124,7 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
                 Ok(v) => v,
                 Err(e) => match send_message(
                     &mut socket,
-                    &GatewayMessage::Error(ApiError::WebsocketMessageDeserializationFailed(
-                        e.to_string(),
-                    )),
+                    &GatewayEvent::Error(ApiError::GatewayDeserializationFailed(e.to_string())),
                 )
                 .await
                 {
@@ -138,7 +136,7 @@ pub async fn ws_handler(mut socket: WebSocket, addr: SocketAddr) {
             match data {
                 IncommingMessage::Ping => {
                     last_ping = Instant::now();
-                    if let Err(e) = send_message(&mut socket, &GatewayMessage::Pong).await {
+                    if let Err(e) = send_message(&mut socket, &GatewayEvent::Pong).await {
                         break Err(e);
                     }
                 }
