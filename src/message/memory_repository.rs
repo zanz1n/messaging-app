@@ -12,6 +12,13 @@ use uuid::Uuid;
 #[derive(Default, Clone)]
 pub struct InMemoryMessageRepository(Arc<Mutex<HashMap<Uuid, Message>>>);
 
+impl InMemoryMessageRepository {
+    #[inline]
+    pub fn new() -> Self {
+        Self(Arc::new(Mutex::new(HashMap::new())))
+    }
+}
+
 #[async_trait]
 impl MessageRepository for InMemoryMessageRepository {
     async fn get_by_id(&self, id: Uuid) -> Result<Option<Message>, ApiError> {
