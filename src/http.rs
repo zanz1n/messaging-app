@@ -66,7 +66,7 @@ impl<T: ApiResponder + Serialize> ApiResponder for Vec<T> {
 pub struct DataResponse<T: Serialize> {
     pub data: T,
     pub message: Option<String>,
-    #[serde(skip)]
+    #[serde(skip_serializing)]
     pub http_code: Option<StatusCode>,
 }
 
