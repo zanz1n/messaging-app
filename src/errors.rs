@@ -173,21 +173,21 @@ impl<'a> Into<u32> for &ApiError<'a> {
     }
 }
 
-impl<'a> Into<ErrorResponse> for &ApiError<'a> {
+impl<'a> From<&ApiError<'a>> for ErrorResponse {
     #[inline]
-    fn into(self) -> ErrorResponse {
+    fn from(value: &ApiError<'a>) -> Self {
         ErrorResponse {
-            error_code: self.into(),
-            status_code: self.into(),
-            message: self.to_string(),
+            error_code: value.into(),
+            status_code: value.into(),
+            message: value.to_string(),
         }
     }
 }
 
-impl<'a> Into<ErrorResponse> for ApiError<'a> {
+impl<'a> From<ApiError<'a>> for ErrorResponse {
     #[inline]
-    fn into(self) -> ErrorResponse {
-        (&self).into()
+    fn from(value: ApiError<'a>) -> Self {
+        (&value).into()
     }
 }
 

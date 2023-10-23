@@ -17,7 +17,7 @@ impl<T: AuthRepository + 'static, S: Send + Sync> FromRequestParts<S> for AuthEx
         let auth_header = match parts.headers.get_mut(header::AUTHORIZATION) {
             Some(v) => {
                 v.set_sensitive(true);
-                v.to_str().or(Err(ApiError::AuthHeaderInvalid.into()))?
+                v.to_str().or(Err(ApiError::AuthHeaderInvalid))?
             }
             None => return Err(ApiError::AuthHeaderMissing.into()),
         };
@@ -27,17 +27,16 @@ impl<T: AuthRepository + 'static, S: Send + Sync> FromRequestParts<S> for AuthEx
         }
         let (_, token) = auth_header.split_at(7);
 
-        let repo = parts.extensions.get::<T>().ok_or(
-            ApiError::ServicePanicked(Some("Failed to get 'AuthRepository' request extension"))
-                .into(),
-        )?;
+        let repo = parts
+            .extensions
+            .get::<T>()
+            .ok_or(ApiError::ServicePanicked(Some(
+                "Failed to get 'AuthRepository' request extension",
+            )))?;
 
-        let payload = repo
-            .auth_user(token.to_string())
-            .await
-            .map_err(Into::into)?;
+        let payload = repo.auth_user(token.to_string()).await?;
 
-        let invalidation = repo.is_invalidated(payload.sub).await.map_err(Into::into)?;
+        let invalidation = repo.is_invalidated(payload.sub).await?;
         if let Some(invalidation) = invalidation {
             if (invalidation.created_at.timestamp() as u64) + 10 > payload.iat {
                 return Err(ApiError::AuthUserInvalidated.into());
