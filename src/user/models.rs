@@ -1,3 +1,4 @@
+use crate::http::ApiResponder;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
@@ -26,6 +27,15 @@ pub struct User {
     pub role: UserRole,
     #[serde(skip_serializing)]
     pub password: String,
+}
+
+impl ApiResponder for User {
+    fn unit() -> &'static str {
+        "user"
+    }
+    fn article() -> &'static str {
+        "An"
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
