@@ -51,7 +51,7 @@ impl IntoResponse for ErrorResponse {
 }
 
 #[derive(Debug, Clone, thiserror::Error)]
-pub enum ApiError<'a> {
+pub enum ApiError {
     #[error("Server service panicked: {0:?}")]
     ServicePanicked(Option<String>),
 
@@ -62,7 +62,7 @@ pub enum ApiError<'a> {
     GatewayMessageNonUTF8,
     #[error("The received message could not be deserialized: {0}")]
     /// The serde deserialization error string
-    GatewayDeserializationFailed(&'a str),
+    GatewayDeserializationFailed(String),
 
     #[error("Something went wrong")]
     CacheGetFailed,
@@ -105,14 +105,14 @@ pub enum ApiError<'a> {
     AuthUserInvalidated,
 }
 
-impl<'a> Serialize for ApiError<'a> {
+impl Serialize for ApiError {
     #[inline]
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         Into::<ErrorResponse>::into(self).serialize(serializer)
     }
 }
 
-impl<'a> Into<StatusCode> for &ApiError<'a> {
+impl Into<StatusCode> for &ApiError {
     #[inline]
     fn into(self) -> StatusCode {
         match self {
@@ -143,7 +143,7 @@ impl<'a> Into<StatusCode> for &ApiError<'a> {
     }
 }
 
-impl<'a> Into<u32> for &ApiError<'a> {
+impl Into<u32> for &ApiError {
     #[inline]
     fn into(self) -> u32 {
         match self {
@@ -173,9 +173,9 @@ impl<'a> Into<u32> for &ApiError<'a> {
     }
 }
 
-impl<'a> From<&ApiError<'a>> for ErrorResponse {
+impl From<&ApiError> for ErrorResponse {
     #[inline]
-    fn from(value: &ApiError<'a>) -> Self {
+    fn from(value: &ApiError) -> Self {
         ErrorResponse {
             error_code: value.into(),
             status_code: value.into(),
@@ -184,14 +184,14 @@ impl<'a> From<&ApiError<'a>> for ErrorResponse {
     }
 }
 
-impl<'a> From<ApiError<'a>> for ErrorResponse {
+impl From<ApiError> for ErrorResponse {
     #[inline]
-    fn from(value: ApiError<'a>) -> Self {
+    fn from(value: ApiError) -> Self {
         (&value).into()
     }
 }
 
-impl<'a> IntoResponse for ApiError<'a> {
+impl IntoResponse for ApiError {
     #[inline]
     fn into_response(self) -> Response<BoxBody> {
         ErrorResponse::new(self.to_string(), (&self).into(), (&self).into()).into_response()

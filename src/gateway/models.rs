@@ -9,11 +9,11 @@ use uuid::Uuid;
     rename_all = "SCREAMING_SNAKE_CASE",
     deny_unknown_fields
 )]
-pub enum GatewayEvent<'a> {
+pub enum GatewayEvent {
     MessageCreated(Message),
     MessageUpdated(Message),
     MessageDelete { id: Uuid },
-    Error(ApiError<'a>),
+    Error(ApiError),
     Pong,
 }
 
