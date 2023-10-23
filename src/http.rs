@@ -1,31 +1,16 @@
-use crate::ENCODING_FAILED_BODY;
+use crate::{
+    errors::{ApiError, ErrorResponse},
+    ENCODING_FAILED_BODY,
+};
+use async_trait::async_trait;
 use axum::{
-    http::{header, HeaderValue, StatusCode},
+    extract::FromRequestParts,
+    http::{header, request::Parts, HeaderValue, StatusCode},
     response::IntoResponse,
+    Extension,
 };
 use serde::Serialize;
-
-pub fn marshal_json_string<T: Serialize>(value: &T) -> String {
-    match serde_json::to_string(value) {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!(error = e.to_string(), "Failed to encode json");
-
-            unsafe { String::from_utf8_unchecked(ENCODING_FAILED_BODY.to_vec()) }
-        }
-    }
-}
-
-pub fn marshal_json_vec<T: Serialize, R: From<Vec<u8>>>(value: &T) -> R {
-    match serde_json::to_vec(value) {
-        Ok(v) => R::from(v),
-        Err(e) => {
-            tracing::error!(error = e.to_string(), "Failed to encode json");
-
-            R::from(ENCODING_FAILED_BODY.to_vec())
-        }
-    }
-}
+use std::{any::type_name, sync::Arc};
 
 pub trait ApiResponder {
     fn http_code(&self) -> StatusCode {
@@ -59,6 +44,46 @@ impl<T: ApiResponder + Serialize> ApiResponder for Vec<T> {
             1 => format!("1 {unit} was returned"),
             n => format!("{n} {unit} were returned"),
         }
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct AppData<T>(pub Arc<T>);
+
+impl<T> AppData<T> {
+    #[inline]
+    pub fn new(data: Arc<T>) -> Self {
+        Self(data)
+    }
+
+    #[inline]
+    pub fn extension(data: T) -> Extension<Arc<T>> {
+        Extension(Arc::new(data))
+    }
+
+    #[inline]
+    pub fn extension_arc(data: Arc<T>) -> Extension<Arc<T>> {
+        Extension(data)
+    }
+}
+
+#[async_trait]
+impl<T: Sync + Send + 'static, S> FromRequestParts<S> for AppData<T> {
+    type Rejection = ErrorResponse;
+
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
+        let data = parts.extensions.get::<Arc<T>>().ok_or_else(|| {
+            let t_name = type_name::<T>();
+            let self_t_name = type_name::<Self>();
+
+            tracing::error!(type_name = t_name, "Failed get AppData request extension");
+
+            ApiError::ServicePanicked(Some(format!(
+                "Failed to get '{self_t_name}' request extension"
+            )))
+        })?;
+
+        Ok(Self::new(data.clone()))
     }
 }
 
@@ -106,11 +131,34 @@ impl<T: ApiResponder + Serialize> IntoResponse for DataResponse<T> {
 }
 
 impl<T: ApiResponder + Serialize> From<T> for DataResponse<T> {
+    #[inline]
     fn from(value: T) -> Self {
         Self {
             message: Some(value.message()),
             http_code: Some(value.http_code()),
             data: value,
+        }
+    }
+}
+
+pub fn marshal_json_string<T: Serialize>(value: &T) -> String {
+    match serde_json::to_string(value) {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!(error = e.to_string(), "Failed to encode json");
+
+            unsafe { String::from_utf8_unchecked(ENCODING_FAILED_BODY.to_vec()) }
+        }
+    }
+}
+
+pub fn marshal_json_vec<T: Serialize, R: From<Vec<u8>>>(value: &T) -> R {
+    match serde_json::to_vec(value) {
+        Ok(v) => R::from(v),
+        Err(e) => {
+            tracing::error!(error = e.to_string(), "Failed to encode json");
+
+            R::from(ENCODING_FAILED_BODY.to_vec())
         }
     }
 }
