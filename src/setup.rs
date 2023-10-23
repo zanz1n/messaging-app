@@ -20,11 +20,11 @@ impl ResponseForPanic for JsonPanicHandler {
         if let Some(s) = err.downcast_ref::<String>() {
             tracing::error!("Service panicked: {}", s);
 
-            ApiError::ServicePanicked(Some(s))
+            ApiError::ServicePanicked(Some(s.into()))
         } else if let Some(s) = err.downcast_ref::<&str>() {
             tracing::error!("Service panicked: {}", s);
 
-            ApiError::ServicePanicked(Some(*s))
+            ApiError::ServicePanicked(Some((*s).into()))
         } else {
             tracing::error!(
                 "Service panicked but `CatchPanic` was unable to downcast the panic info"

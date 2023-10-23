@@ -5,7 +5,7 @@ use axum::{
     extract::FromRequestParts,
     http::{header, request::Parts},
 };
-use std::marker::PhantomData;
+use std::{any::type_name, marker::PhantomData};
 
 pub struct AuthExtractor<T: AuthRepository>(pub UserAuthPayload, PhantomData<T>);
 
@@ -27,12 +27,16 @@ impl<T: AuthRepository + 'static, S: Send + Sync> FromRequestParts<S> for AuthEx
         }
         let (_, token) = auth_header.split_at(7);
 
-        let repo = parts
-            .extensions
-            .get::<T>()
-            .ok_or(ApiError::ServicePanicked(Some(
-                "Failed to get 'AuthRepository' request extension",
-            )))?;
+        let repo = parts.extensions.get::<T>().ok_or_else(|| {
+            let t_name = type_name::<T>();
+
+            tracing::error!(
+                type_name = t_name,
+                "Failed to get AuthRepository impl request extension"
+            );
+
+            ApiError::ServicePanicked(Some(format!("Failed to get '{t_name}' request extension")))
+        })?;
 
         let payload = repo.auth_user(token.to_string()).await?;
 

@@ -53,7 +53,7 @@ impl IntoResponse for ErrorResponse {
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum ApiError<'a> {
     #[error("Server service panicked: {0:?}")]
-    ServicePanicked(Option<&'a str>),
+    ServicePanicked(Option<String>),
 
     #[error("Websocket packets must be sent every {0} seconds")]
     /// The amount of seconds between a packet acknowledgement
