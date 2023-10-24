@@ -4,8 +4,8 @@ use crate::{
 };
 use async_trait::async_trait;
 use axum::{
-    extract::FromRequestParts,
-    http::{header, request::Parts, HeaderValue, StatusCode},
+    extract::{rejection::JsonRejection, FromRequest, FromRequestParts},
+    http::{header, request::Parts, HeaderValue, Request, StatusCode},
     response::IntoResponse,
     Extension,
 };
@@ -137,6 +137,32 @@ impl<T: ApiResponder + Serialize> From<T> for DataResponse<T> {
             message: Some(value.message()),
             http_code: Some(value.http_code()),
             data: value,
+        }
+    }
+}
+
+pub struct Json<T>(pub T);
+
+#[async_trait]
+impl<S, B, T> FromRequest<S, B> for Json<T>
+where
+    axum::Json<T>: FromRequest<S, B, Rejection = JsonRejection>,
+    S: Send + Sync,
+    B: Send + 'static,
+{
+    type Rejection = ErrorResponse;
+
+    async fn from_request(req: Request<B>, state: &S) -> Result<Self, Self::Rejection> {
+        match axum::Json::from_request(req, state).await {
+            Ok(axum::Json(v)) => Ok(Self(v)),
+            Err(e) => {
+                let status_code = e.status();
+                Err(ErrorResponse {
+                    error_code: u32::from(status_code.as_u16()) * 100_u32,
+                    status_code,
+                    message: e.body_text(),
+                })
+            }
         }
     }
 }
