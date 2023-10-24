@@ -7,7 +7,7 @@ use axum::{
 };
 use std::{any::type_name, marker::PhantomData};
 
-pub struct AuthExtractor<T: AuthRepository>(pub UserAuthPayload, PhantomData<T>);
+pub struct AuthExtractor<T: AuthRepository>(pub UserAuthPayload, pub PhantomData<T>);
 
 #[async_trait]
 impl<T: AuthRepository + 'static, S: Send + Sync> FromRequestParts<S> for AuthExtractor<T> {
