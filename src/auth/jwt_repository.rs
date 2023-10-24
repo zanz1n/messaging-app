@@ -72,8 +72,18 @@ where
     ) -> Result<String, ApiError> {
         let b = tokio::task::spawn_blocking(move || bcrypt::verify(password, &user_password))
             .await
-            .or(Err(ApiError::AuthBcryptHashFailed))?
-            .or(Err(ApiError::AuthBcryptHashFailed))?;
+            .map_err(|e| {
+                tracing::error!(error = e.to_string(), "Failed to spawn blocking");
+                ApiError::AuthBcryptHashFailed
+            })?
+            .map_err(|e| {
+                tracing::error!(
+                    user_id = user_id.to_string(),
+                    error = e.to_string(),
+                    "Failed to compare user password hash"
+                );
+                ApiError::AuthBcryptHashFailed
+            })?;
 
         if !b {
             return Err(ApiError::AuthFailed);
