@@ -5,14 +5,16 @@ edition = "2021"
 resolver = "2"
 
 [features]
-full = ["dotenv", "http_trace", "http_cors", "json_log"]
+full = ["dotenv", "http_trace", "http_cors", "json_log", "postgres_repository"]
 development = ["dotenv", "http_trace", "http_cors"]
-production = ["http_trace", "http_cors", "json_log"]
+production = ["http_trace", "http_cors", "json_log", "postgres_repository"]
 
 dotenv = ["dep:dotenvy"]
 http_trace = ["tower-http/trace"]
 http_cors = ["tower-http/cors"]
 json_log = ["tracing-subscriber/json"]
+
+postgres_repository = []
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
