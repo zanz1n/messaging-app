@@ -51,8 +51,6 @@ async fn body() -> Result<(), BoxedError> {
         .try_init()?;
 
     let port = env_param("APP_PORT").unwrap_or(8080_u16);
-    let jwt_token_duration = env_param("APP_JWT_DURATION").unwrap_or(3600_u64);
-    let jwt_key = env_param::<String>("APP_JWT_KEY")?;
 
     let mut app = Router::new();
 
@@ -82,7 +80,11 @@ async fn body() -> Result<(), BoxedError> {
             user::memory_repository::InMemoryUserRepository,
         };
 
-        let user_repo = InMemoryUserRepository::new();
+        let jwt_token_duration = env_param("APP_JWT_DURATION").unwrap_or(3600_u64);
+        let jwt_key = env_param::<String>("APP_JWT_KEY")?;
+        let bcrypt_cost = env_param("APP_BCRYPT_COST").unwrap_or(bcrypt::DEFAULT_COST);
+
+        let user_repo = InMemoryUserRepository::new(bcrypt_cost);
         let cache_repo = InMemoryCacheRepository::new();
         let auth_repo = JwtAuthRepository::new(
             Algorithm::HS512,

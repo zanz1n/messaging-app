@@ -8,6 +8,7 @@ use base64::{engine::general_purpose, Engine};
 use chrono::Utc;
 use jsonwebtoken::{errors::ErrorKind, Algorithm, DecodingKey, EncodingKey, Header, Validation};
 use rand::Rng;
+use tokio::task::spawn_blocking;
 use uuid::Uuid;
 
 #[derive(Clone)]
@@ -70,7 +71,7 @@ where
         user_password: String,
         password: String,
     ) -> Result<String, ApiError> {
-        let b = tokio::task::spawn_blocking(move || bcrypt::verify(password, &user_password))
+        let b = spawn_blocking(move || bcrypt::verify(password, &user_password))
             .await
             .map_err(|e| {
                 tracing::error!(error = e.to_string(), "Failed to spawn blocking");
