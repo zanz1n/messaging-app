@@ -73,6 +73,15 @@ pub enum ApiError {
     #[error("Something went wrong")]
     CacheSerializationFailed,
 
+    #[error("Something went wrong")]
+    MessagingDeserializationFailed,
+    #[error("Something went wrong")]
+    MessagingSerializationFailed,
+    #[error("Something went wrong")]
+    MessagingSendError,
+    #[error("Something went wrong")]
+    MessagingRecvError,
+
     #[error("The message could not be found")]
     MessageNotFound,
     #[error("Failed to fetch the message")]
@@ -124,6 +133,10 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
             | ApiError::CacheSerializationFailed
+            | ApiError::MessagingDeserializationFailed
+            | ApiError::MessagingSerializationFailed
+            | ApiError::MessagingSendError
+            | ApiError::MessagingRecvError
             | ApiError::AuthBcryptHashFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
@@ -151,6 +164,10 @@ impl Into<u32> for &ApiError {
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
             | ApiError::CacheSerializationFailed
+            | ApiError::MessagingDeserializationFailed
+            | ApiError::MessagingSerializationFailed
+            | ApiError::MessagingSendError
+            | ApiError::MessagingRecvError
             | ApiError::AuthBcryptHashFailed => 50000,
             ApiError::ServicePanicked(_) => 50001,
             ApiError::GatewayTimeout(_) => 40801,

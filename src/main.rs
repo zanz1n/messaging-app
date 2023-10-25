@@ -5,6 +5,7 @@ mod gateway;
 mod handlers;
 mod http;
 mod message;
+mod messaging;
 mod setup;
 mod user;
 
