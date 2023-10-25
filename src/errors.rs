@@ -112,6 +112,11 @@ pub enum ApiError {
     AuthBcryptHashFailed,
     #[error("The user is under invalidation, please login again later")]
     AuthUserInvalidated,
+
+    #[error("The channel could not be found")]
+    ChannelNotFound,
+    #[error("Failed to fetch the channel")]
+    ChannelFetchFailed,
 }
 
 impl Serialize for ApiError {
@@ -137,7 +142,8 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::MessagingSerializationFailed
             | ApiError::MessagingSendError
             | ApiError::MessagingRecvError
-            | ApiError::AuthBcryptHashFailed => StatusCode::INTERNAL_SERVER_ERROR,
+            | ApiError::AuthBcryptHashFailed
+            | ApiError::ChannelFetchFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
             ApiError::GatewayDeserializationFailed(_) | ApiError::GatewayMessageNonUTF8 => {
                 StatusCode::BAD_REQUEST
@@ -150,7 +156,8 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::UserNotFound
             | ApiError::AuthTokenExpired
             | ApiError::AuthRefreshTokenInvalid
-            | ApiError::AuthUserInvalidated => StatusCode::UNAUTHORIZED,
+            | ApiError::AuthUserInvalidated
+            | ApiError::ChannelNotFound => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
         }
     }
@@ -186,6 +193,8 @@ impl Into<u32> for &ApiError {
             ApiError::AuthRefreshTokenInvalid => 40106,
             ApiError::AuthUserInvalidated => 40107,
             ApiError::AuthTokenGenerationFailed => 50004,
+            ApiError::ChannelNotFound => 40403,
+            ApiError::ChannelFetchFailed => 50005,
         }
     }
 }

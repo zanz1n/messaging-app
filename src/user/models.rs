@@ -52,14 +52,6 @@ pub struct UserUpdateData {
     pub username: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "SCREAMING_SNAKE_CASE", deny_unknown_fields)]
-pub enum UserChannelPermission {
-    Read,
-    Write,
-    None,
-}
-
 #[derive(Debug, Clone)]
 pub(super) enum UserUpdateVariant {
     Username(String),

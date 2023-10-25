@@ -1,5 +1,6 @@
 mod auth;
 mod cache;
+mod channel;
 mod errors;
 mod gateway;
 mod handlers;
