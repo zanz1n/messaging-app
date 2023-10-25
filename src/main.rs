@@ -8,10 +8,10 @@ mod message;
 mod setup;
 mod user;
 
-#[cfg(feature = "postgres_repository")]
+#[cfg(feature = "postgres-redis-repository")]
 mod impls {}
 
-#[cfg(not(feature = "postgres_repository"))]
+#[cfg(not(feature = "postgres-redis-repository"))]
 mod impls {
     pub type UserRepo = crate::user::memory_repository::InMemoryUserRepository;
     pub type CacheRepo = crate::cache::memory_repository::InMemoryCacheRepository;
@@ -39,13 +39,13 @@ async fn body() -> Result<(), BoxedError> {
     #[cfg(feature = "dotenv")]
     dotenvy::dotenv().map_err(|_| crate::setup::VarError::DotenvFileNotFound)?;
 
-    #[cfg(feature = "json_log")]
+    #[cfg(feature = "json-log")]
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .json()
         .try_init()?;
 
-    #[cfg(not(feature = "json_log"))]
+    #[cfg(not(feature = "json-log"))]
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .try_init()?;
@@ -72,7 +72,10 @@ async fn body() -> Result<(), BoxedError> {
             routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo>),
         );
 
-    #[cfg(not(feature = "postgres_repository"))]
+    #[cfg(feature = "postgres-redis-repository")]
+    {}
+
+    #[cfg(not(feature = "postgres-redis-repository"))]
     {
         use crate::{
             auth::jwt_repository::JwtAuthRepository,
@@ -105,11 +108,11 @@ async fn body() -> Result<(), BoxedError> {
         .layer(NormalizePathLayer::trim_trailing_slash())
         .layer(CatchPanicLayer::custom(JsonPanicHandler));
 
-    #[cfg(feature = "http_trace")]
+    #[cfg(feature = "http-trace")]
     {
         app = app.layer(tower_http::trace::TraceLayer::new_for_http());
     }
-    #[cfg(feature = "http_cors")]
+    #[cfg(feature = "http-cors")]
     {
         use crate::setup::setup_app_cors;
         app = setup_app_cors(app);

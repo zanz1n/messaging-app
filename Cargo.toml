@@ -5,16 +5,27 @@ edition = "2021"
 resolver = "2"
 
 [features]
-full = ["dotenv", "http_trace", "http_cors", "json_log", "postgres_repository"]
-development = ["dotenv", "http_trace", "http_cors"]
-production = ["http_trace", "http_cors", "json_log", "postgres_repository"]
+full = [
+    "dotenv",
+    "http-trace",
+    "http-cors",
+    "json-log",
+    "postgres-redis-repository",
+]
+development = ["dotenv", "http-trace", "http-cors"]
+production = [
+    "http-trace",
+    "http-cors",
+    "json-log",
+    "postgres-redis-repository",
+]
 
 dotenv = ["dep:dotenvy"]
-http_trace = ["tower-http/trace"]
-http_cors = ["tower-http/cors"]
-json_log = ["tracing-subscriber/json"]
+http-trace = ["tower-http/trace"]
+http-cors = ["tower-http/cors"]
+json-log = ["tracing-subscriber/json"]
 
-postgres_repository = []
+postgres-redis-repository = ["dep:sqlx", "dep:deadpool-redis"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -40,6 +51,18 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 thiserror = "1.0"
 async-trait = "0.1"
+
+sqlx = { version = "0.7", optional = true, features = [
+    "runtime-tokio",
+    "tls-rustls",
+    "postgres",
+    "any",
+    "chrono",
+] }
+
+deadpool-redis = { version = "0.13", optional = true, features = [
+    "rt_tokio_1",
+] }
 
 [profile.release]
 panic = "unwind"

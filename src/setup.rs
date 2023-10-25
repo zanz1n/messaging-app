@@ -36,10 +36,10 @@ impl ResponseForPanic for JsonPanicHandler {
     }
 }
 
-#[cfg(feature = "http_cors")]
+#[cfg(feature = "http-cors")]
 use axum::routing::Router;
 
-#[cfg(feature = "http_cors")]
+#[cfg(feature = "http-cors")]
 pub fn setup_app_cors(app: Router) -> Router {
     use std::time::Duration;
     use tower_http::cors::{
