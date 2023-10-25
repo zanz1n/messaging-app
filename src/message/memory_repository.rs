@@ -53,8 +53,8 @@ impl MessageRepository for InMemoryMessageRepository {
 
             if v.channel_id == channel_id {
                 arr.push(v.clone());
+                i += 1;
             }
-            i += 1;
         }
         drop(lock);
 
