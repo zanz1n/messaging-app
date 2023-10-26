@@ -18,6 +18,8 @@ mod impls {
     pub type UserRepo = crate::user::memory_repository::InMemoryUserRepository;
     pub type CacheRepo = crate::cache::memory_repository::InMemoryCacheRepository;
     pub type AuthRepo = crate::auth::jwt_repository::JwtAuthRepository<CacheRepo>;
+    pub type MessageRepo = crate::message::memory_repository::InMemoryMessageRepository;
+    pub type ChannelRepo = crate::channel::memory_repository::InMemoryChannelRepository;
 }
 
 use crate::{
@@ -72,6 +74,28 @@ async fn body() -> Result<(), BoxedError> {
         .route(
             "/auth/self/invalidate",
             routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/message/{message_id}",
+            routing::get(handlers::get_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/messages",
+            routing::get(handlers::get_channel_id_messages::<MessageRepo, ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/message",
+            routing::post(handlers::post_channel_id_message::<MessageRepo, ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/message/{message_id}",
+            routing::put(handlers::put_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/message/{message_id}",
+            routing::patch(
+                handlers::put_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>,
+            ),
         );
 
     #[cfg(feature = "postgres-redis-repository")]

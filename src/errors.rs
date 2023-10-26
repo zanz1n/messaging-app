@@ -86,6 +86,8 @@ pub enum ApiError {
     MessageNotFound,
     #[error("Failed to fetch the message")]
     MessageFetchFailed,
+    #[error("You cannot edit a message you didn't send")]
+    MessageEditDenied,
 
     #[error("The user could not be found")]
     UserNotFound,
@@ -117,6 +119,8 @@ pub enum ApiError {
     ChannelNotFound,
     #[error("Failed to fetch the channel")]
     ChannelFetchFailed,
+    #[error("You don't have permission to do this action in the channel")]
+    ChannelPermissionDenied,
 }
 
 impl Serialize for ApiError {
@@ -159,6 +163,9 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::AuthUserInvalidated
             | ApiError::ChannelNotFound => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
+            ApiError::MessageEditDenied | ApiError::ChannelPermissionDenied => {
+                StatusCode::FORBIDDEN
+            }
         }
     }
 }
@@ -182,6 +189,7 @@ impl Into<u32> for &ApiError {
             ApiError::GatewayDeserializationFailed(_) => 40002,
             ApiError::MessageNotFound => 40401,
             ApiError::MessageFetchFailed => 50002,
+            ApiError::MessageEditDenied => 40301,
             ApiError::UserNotFound => 40402,
             ApiError::UserFetchFailed => 50003,
             ApiError::UserAlreadyExists => 40901,
@@ -195,6 +203,7 @@ impl Into<u32> for &ApiError {
             ApiError::AuthTokenGenerationFailed => 50004,
             ApiError::ChannelNotFound => 40403,
             ApiError::ChannelFetchFailed => 50005,
+            ApiError::ChannelPermissionDenied => 40302,
         }
     }
 }
