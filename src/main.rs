@@ -24,6 +24,7 @@ mod impls {
 
 use crate::{
     auth::handlers::AuthHandlers,
+    channel::handlers::ChannelHandlers,
     http::AppData,
     impls::*,
     message::handlers::MessageHandlers,
@@ -75,6 +76,34 @@ async fn body() -> Result<(), BoxedError> {
         .route(
             "/auth/self/invalidate",
             routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo>),
+        )
+        .route(
+            "/channel/{channel_id}",
+            routing::get(handlers::get_channel_id::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channels/self",
+            routing::get(handlers::get_channels_self::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel",
+            routing::post(handlers::post_channel::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}/permission",
+            routing::put(handlers::put_channel_id_permission::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}",
+            routing::put(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}",
+            routing::patch(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
+        )
+        .route(
+            "/channel/{channel_id}",
+            routing::delete(handlers::delete_channel_id::<ChannelRepo, AuthRepo>),
         )
         .route(
             "/channel/{channel_id}/message/{message_id}",
@@ -132,12 +161,14 @@ async fn body() -> Result<(), BoxedError> {
         let message_repo = MessageRepo::new();
         let channel_repo = ChannelRepo::new();
 
-        let message_handlers = MessageHandlers::new(message_repo, channel_repo);
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
+        let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
+        let channel_handlers = ChannelHandlers::new(channel_repo);
 
         app = app
-            .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(auth_handlers))
+            .layer(AppData::extension(message_handlers))
+            .layer(AppData::extension(channel_handlers))
             .layer(Extension(auth_repo))
     }
 
