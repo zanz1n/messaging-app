@@ -14,7 +14,7 @@ pub trait ChannelRepository: Sync + Send {
         limit: u64,
     ) -> Result<Vec<Channel>, ApiError>;
 
-    async fn create(&self, data: ChannelCreateData) -> Result<Channel, ApiError>;
+    async fn create(&self, user_id: Uuid, data: ChannelCreateData) -> Result<Channel, ApiError>;
 
     async fn set_user_permission(
         &self,

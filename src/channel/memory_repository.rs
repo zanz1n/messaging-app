@@ -73,13 +73,14 @@ impl ChannelRepository for InMemoryChannelRepository {
         Ok(channel_vec)
     }
 
-    async fn create(&self, data: ChannelCreateData) -> Result<Channel, ApiError> {
+    async fn create(&self, user_id: Uuid, data: ChannelCreateData) -> Result<Channel, ApiError> {
         let id = Uuid::new_v4();
         let now = Utc::now();
         let channel = Channel {
             id,
             created_at: now,
             updated_at: now,
+            user_id,
             name: data.name,
         };
 
@@ -125,6 +126,15 @@ impl ChannelRepository for InMemoryChannelRepository {
         user_id: Uuid,
         channel_id: Uuid,
     ) -> Result<UserPermission, ApiError> {
+        let channel = self
+            .get_by_id(channel_id)
+            .await?
+            .ok_or(ApiError::ChannelNotFound)?;
+
+        if channel.user_id == user_id {
+            return Ok(UserPermission::Owner);
+        }
+
         let lock = self.perm_map.lock().await;
         let mut perm = UserPermission::None;
         for p in lock.iter() {
