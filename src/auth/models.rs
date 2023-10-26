@@ -20,7 +20,7 @@ pub struct UserInvalidationPayload {
     pub reason: InvalidationReason,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum InvalidationReason {
     Requested,

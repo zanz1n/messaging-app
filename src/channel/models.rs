@@ -37,7 +37,7 @@ pub struct ChannelUpdateData {
     pub name: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum UserPermission {
     Owner,
@@ -95,4 +95,15 @@ pub struct UserPermissionEntry {
     pub channel_id: Uuid,
     pub user_id: Uuid,
     pub permission: UserPermission,
+}
+
+impl ApiResponder for UserPermissionEntry {
+    #[inline]
+    fn unit() -> &'static str {
+        "user permission entry"
+    }
+    #[inline]
+    fn article() -> &'static str {
+        "An"
+    }
 }

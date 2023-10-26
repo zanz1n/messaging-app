@@ -50,7 +50,7 @@ impl IntoResponse for ErrorResponse {
     }
 }
 
-#[derive(Debug, Clone, thiserror::Error)]
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApiError {
     #[error("Server service panicked: {0:?}")]
     ServicePanicked(Option<String>),
