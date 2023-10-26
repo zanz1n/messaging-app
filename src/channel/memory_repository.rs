@@ -88,6 +88,18 @@ impl ChannelRepository for InMemoryChannelRepository {
         lock.insert(id, channel.clone());
         drop(lock);
 
+        if let Some(users) = data.init_users {
+            let mut lock = self.perm_map.lock().await;
+            for u in users {
+                lock.push(UserPermissionEntry {
+                    channel_id: channel.id,
+                    user_id: u,
+                    permission: UserPermission::Interact,
+                });
+            }
+            drop(lock);
+        }
+
         Ok(channel)
     }
 
