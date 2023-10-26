@@ -8,6 +8,7 @@ use crate::{
     errors::ApiError,
     http::DataResponse,
 };
+use axum::http::StatusCode;
 use serde::Deserialize;
 use std::marker::PhantomData;
 use uuid::Uuid;
@@ -87,6 +88,10 @@ where
             None => return Err(ApiError::MessageNotFound),
         };
 
+        if msg.channel_id != path.channel_id {
+            return Err(ApiError::MessageNotFound);
+        }
+
         Ok(msg.into())
     }
 
@@ -133,6 +138,10 @@ where
             .create(auth.sub, path.channel_id, body)
             .await?;
 
+        if msg.channel_id != path.channel_id {
+            return Err(ApiError::MessageNotFound);
+        }
+
         Ok(msg.into())
     }
 
@@ -156,11 +165,46 @@ where
             None => return Err(ApiError::MessageNotFound),
         };
 
+        if msg.channel_id != path.channel_id {
+            return Err(ApiError::MessageNotFound);
+        }
+
         if msg.user_id != auth.sub {
             return Err(ApiError::MessageEditDenied);
         }
         let msg = self.message_repo.update(msg.id, body).await?;
 
         Ok(msg.into())
+    }
+
+    pub async fn handle_delete(
+        &self,
+        auth: UserAuthPayload,
+        path: ChannelIdMessageIdPathParams,
+    ) -> Result<DataResponse<()>, ApiError> {
+        let perm = self
+            .channel_repo
+            .get_user_permisson(auth.sub, path.channel_id)
+            .await?;
+
+        let msg = match self.message_repo.get_by_id(path.message_id).await? {
+            Some(v) => v,
+            None => return Err(ApiError::MessageNotFound),
+        };
+
+        if msg.channel_id != path.channel_id {
+            return Err(ApiError::MessageNotFound);
+        }
+        if msg.user_id != auth.sub && !perm.can_update_chan() {
+            return Err(ApiError::MessageDeleteDenied);
+        }
+
+        self.message_repo.delete(path.message_id).await?;
+
+        Ok(DataResponse {
+            data: (),
+            message: Some("Message deleted".into()),
+            http_code: Some(StatusCode::OK),
+        })
     }
 }

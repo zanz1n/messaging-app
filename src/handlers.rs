@@ -119,3 +119,16 @@ where
 {
     data.handle_update(auth, path, body).await
 }
+
+pub async fn delete_channel_id_message_id<M, C, A>(
+    AuthExtractor(auth, _): AuthExtractor<A>,
+    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    Path(path): Path<ChannelIdMessageIdPathParams>,
+) -> Result<DataResponse<()>, ApiError>
+where
+    M: MessageRepository + 'static,
+    C: ChannelRepository + 'static,
+    A: AuthRepository + 'static,
+{
+    data.handle_delete(auth, path).await
+}

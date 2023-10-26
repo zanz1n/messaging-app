@@ -97,6 +97,12 @@ async fn body() -> Result<(), BoxedError> {
             routing::patch(
                 handlers::put_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>,
             ),
+        )
+        .route(
+            "/channel/{channel_id}/message/{message_id}",
+            routing::delete(
+                handlers::delete_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>,
+            ),
         );
 
     #[cfg(feature = "postgres-redis-repository")]

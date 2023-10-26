@@ -88,6 +88,8 @@ pub enum ApiError {
     MessageFetchFailed,
     #[error("You cannot edit a message you didn't send")]
     MessageEditDenied,
+    #[error("You cannot delete a message if you don't own it or if you are not an admin")]
+    MessageDeleteDenied,
 
     #[error("The user could not be found")]
     UserNotFound,
@@ -163,9 +165,9 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::AuthUserInvalidated
             | ApiError::ChannelNotFound => StatusCode::UNAUTHORIZED,
             ApiError::MessageNotFound => StatusCode::NOT_FOUND,
-            ApiError::MessageEditDenied | ApiError::ChannelPermissionDenied => {
-                StatusCode::FORBIDDEN
-            }
+            ApiError::MessageEditDenied
+            | ApiError::MessageDeleteDenied
+            | ApiError::ChannelPermissionDenied => StatusCode::FORBIDDEN,
         }
     }
 }
@@ -190,6 +192,7 @@ impl Into<u32> for &ApiError {
             ApiError::MessageNotFound => 40401,
             ApiError::MessageFetchFailed => 50002,
             ApiError::MessageEditDenied => 40301,
+            ApiError::MessageDeleteDenied => 40302,
             ApiError::UserNotFound => 40402,
             ApiError::UserFetchFailed => 50003,
             ApiError::UserAlreadyExists => 40901,
@@ -203,7 +206,7 @@ impl Into<u32> for &ApiError {
             ApiError::AuthTokenGenerationFailed => 50004,
             ApiError::ChannelNotFound => 40403,
             ApiError::ChannelFetchFailed => 50005,
-            ApiError::ChannelPermissionDenied => 40302,
+            ApiError::ChannelPermissionDenied => 40303,
         }
     }
 }

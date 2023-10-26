@@ -25,6 +25,17 @@ pub trait ApiResponder {
     }
 }
 
+impl ApiResponder for () {
+    #[inline]
+    fn unit() -> &'static str {
+        "reponse with nothing"
+    }
+    #[inline]
+    fn article() -> &'static str {
+        "A"
+    }
+}
+
 impl<T: ApiResponder + Serialize> ApiResponder for Vec<T> {
     #[inline]
     fn unit() -> &'static str {
