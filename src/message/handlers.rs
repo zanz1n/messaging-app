@@ -3,14 +3,11 @@ use super::{
     repository::MessageRepository,
 };
 use crate::{
-    auth::{models::UserAuthPayload, repository::AuthRepository},
-    channel::repository::ChannelRepository,
-    errors::ApiError,
+    auth::models::UserAuthPayload, channel::repository::ChannelRepository, errors::ApiError,
     http::DataResponse,
 };
 use axum::http::StatusCode;
 use serde::Deserialize;
-use std::marker::PhantomData;
 use uuid::Uuid;
 
 #[inline(always)]
@@ -44,28 +41,24 @@ pub struct ChannelIdPathParams {
     pub channel_id: Uuid,
 }
 
-pub struct MessageHandlers<M, C, A>
+pub struct MessageHandlers<M, C>
 where
     M: MessageRepository,
     C: ChannelRepository,
-    A: AuthRepository,
 {
     message_repo: M,
     channel_repo: C,
-    _pa: PhantomData<A>,
 }
 
-impl<M, C, A> MessageHandlers<M, C, A>
+impl<M, C> MessageHandlers<M, C>
 where
     M: MessageRepository,
     C: ChannelRepository,
-    A: AuthRepository,
 {
     pub fn new(message_repo: M, channel_repo: C) -> Self {
         Self {
             message_repo,
             channel_repo,
-            _pa: PhantomData,
         }
     }
 

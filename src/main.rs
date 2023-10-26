@@ -132,8 +132,7 @@ async fn body() -> Result<(), BoxedError> {
         let message_repo = MessageRepo::new();
         let channel_repo = ChannelRepo::new();
 
-        let message_handlers =
-            MessageHandlers::<MessageRepo, ChannelRepo, AuthRepo>::new(message_repo, channel_repo);
+        let message_handlers = MessageHandlers::new(message_repo, channel_repo);
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
 
         app = app

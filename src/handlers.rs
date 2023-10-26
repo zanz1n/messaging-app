@@ -67,7 +67,7 @@ where
 
 pub async fn get_channel_id_message_id<M, C, A>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    AppData(data): AppData<MessageHandlers<M, C>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
 ) -> Result<DataResponse<Message>, ApiError>
 where
@@ -80,7 +80,7 @@ where
 
 pub async fn get_channel_id_messages<M, C, A>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    AppData(data): AppData<MessageHandlers<M, C>>,
     Path(path): Path<ChannelIdPathParams>,
     Query(query): Query<GetManyQueryParams>,
 ) -> Result<DataResponse<Vec<Message>>, ApiError>
@@ -94,7 +94,7 @@ where
 
 pub async fn post_channel_id_message<M, C, A>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    AppData(data): AppData<MessageHandlers<M, C>>,
     Path(path): Path<ChannelIdPathParams>,
     Json(body): Json<MessageCreateData>,
 ) -> Result<DataResponse<Message>, ApiError>
@@ -108,7 +108,7 @@ where
 
 pub async fn put_channel_id_message_id<M, C, A>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    AppData(data): AppData<MessageHandlers<M, C>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
     Json(body): Json<MessageUpdateData>,
 ) -> Result<DataResponse<Message>, ApiError>
@@ -122,7 +122,7 @@ where
 
 pub async fn delete_channel_id_message_id<M, C, A>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C, A>>,
+    AppData(data): AppData<MessageHandlers<M, C>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
 ) -> Result<DataResponse<()>, ApiError>
 where
