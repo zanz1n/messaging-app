@@ -60,6 +60,14 @@ where
     C: ChannelRepository,
     A: AuthRepository,
 {
+    pub fn new(message_repo: M, channel_repo: C) -> Self {
+        Self {
+            message_repo,
+            channel_repo,
+            _pa: PhantomData,
+        }
+    }
+
     pub async fn handle_get_one(
         &self,
         auth: UserAuthPayload,

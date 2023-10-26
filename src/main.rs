@@ -26,6 +26,7 @@ use crate::{
     auth::handlers::AuthHandlers,
     http::AppData,
     impls::*,
+    message::handlers::MessageHandlers,
     setup::{env_param, JsonPanicHandler},
 };
 use axum::{routing, Extension, Router, Server};
@@ -122,10 +123,15 @@ async fn body() -> Result<(), BoxedError> {
             jwt_token_duration,
             cache_repo,
         );
+        let message_repo = MessageRepo::new();
+        let channel_repo = ChannelRepo::new();
 
+        let message_handlers =
+            MessageHandlers::<MessageRepo, ChannelRepo, AuthRepo>::new(message_repo, channel_repo);
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
 
         app = app
+            .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(auth_handlers))
             .layer(Extension(auth_repo))
     }
