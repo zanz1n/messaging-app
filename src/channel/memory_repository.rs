@@ -61,6 +61,14 @@ impl ChannelRepository for InMemoryChannelRepository {
         }
         drop(lock);
 
+        let lock = self.channel_map.lock().await;
+        for (id, chan) in lock.iter() {
+            if chan.user_id == user_id {
+                channel_id_vec.push(id.clone());
+            }
+        }
+        drop(lock);
+
         let mut channel_vec = Vec::with_capacity(channel_id_vec.len());
 
         let lock = self.channel_map.lock().await;
