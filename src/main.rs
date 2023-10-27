@@ -78,7 +78,7 @@ async fn body() -> Result<(), BoxedError> {
             routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo>),
         )
         .route(
-            "/channel/{channel_id}",
+            "/channel/:channel_id",
             routing::get(handlers::get_channel_id::<ChannelRepo, AuthRepo>),
         )
         .route(
@@ -90,45 +90,45 @@ async fn body() -> Result<(), BoxedError> {
             routing::post(handlers::post_channel::<ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/permission",
+            "/channel/:channel_id/permission",
             routing::put(handlers::put_channel_id_permission::<ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}",
+            "/channel/:channel_id",
             routing::put(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}",
+            "/channel/:channel_id",
             routing::patch(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}",
+            "/channel/:channel_id",
             routing::delete(handlers::delete_channel_id::<ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/message/{message_id}",
+            "/channel/:channel_id/message/:message_id",
             routing::get(handlers::get_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/messages",
+            "/channel/:channel_id/messages",
             routing::get(handlers::get_channel_id_messages::<MessageRepo, ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/message",
+            "/channel/:channel_id/message",
             routing::post(handlers::post_channel_id_message::<MessageRepo, ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/message/{message_id}",
+            "/channel/:channel_id/message/:message_id",
             routing::put(handlers::put_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>),
         )
         .route(
-            "/channel/{channel_id}/message/{message_id}",
+            "/channel/:channel_id/message/:message_id",
             routing::patch(
                 handlers::put_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>,
             ),
         )
         .route(
-            "/channel/{channel_id}/message/{message_id}",
+            "/channel/:channel_id/message/:message_id",
             routing::delete(
                 handlers::delete_channel_id_message_id::<MessageRepo, ChannelRepo, AuthRepo>,
             ),
