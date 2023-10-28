@@ -66,5 +66,6 @@ deadpool-redis = { version = "0.13", optional = true, features = [
 
 [profile.release]
 panic = "unwind"
+strip = true
 lto = true
 codegen-units = 1
