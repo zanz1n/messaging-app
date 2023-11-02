@@ -25,7 +25,12 @@ http-trace = ["tower-http/trace"]
 http-cors = ["tower-http/cors"]
 json-log = ["tracing-subscriber/json"]
 
-postgres-redis-repository = ["dep:sqlx", "dep:deadpool-redis"]
+sqlx = ["dep:sqlx"]
+postgres = ["sqlx", "sqlx/postgres"]
+
+redis = ["dep:deadpool-redis"]
+
+postgres-redis-repository = ["postgres", "redis"]
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -55,9 +60,9 @@ async-trait = "0.1"
 sqlx = { version = "0.7", optional = true, features = [
     "runtime-tokio",
     "tls-rustls",
-    "postgres",
     "any",
     "chrono",
+    "uuid",
 ] }
 
 deadpool-redis = { version = "0.13", optional = true, features = [
