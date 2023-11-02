@@ -33,6 +33,7 @@ redis = ["dep:deadpool-redis"]
 postgres-redis-repository = ["postgres", "redis"]
 
 [dependencies]
+tikv-jemallocator = "0.5"
 tokio = { version = "1", features = ["full"] }
 dotenvy = { version = "0.15", optional = true }
 
