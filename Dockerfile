@@ -1,6 +1,4 @@
-FROM rust:1.73 AS builder
-
-RUN rustup target add x86_64-unknown-linux-musl
+FROM rust:1.73-bookworm AS builder
 
 RUN apt-get update -y
 RUN export DEBIAN_FRONTEND=noninteractive
@@ -10,6 +8,8 @@ RUN apt-get install -y apt-utils && \
     musl-dev \
     musl-tools
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN rustup target add x86_64-unknown-linux-musl
 
 WORKDIR /app
 COPY . /app
