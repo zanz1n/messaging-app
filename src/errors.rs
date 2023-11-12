@@ -15,6 +15,10 @@ pub enum ApiError {
     #[error("Something went wrong while fetching the data")]
     SqlxError,
 
+    #[cfg(feature = "redis")]
+    #[error("Something went wrong")]
+    RedisError,
+
     #[error("Websocket packets must be sent every {0} seconds")]
     /// The amount of seconds between a packet acknowledgement
     GatewayTimeout(u64),
@@ -98,6 +102,8 @@ impl Into<StatusCode> for &ApiError {
         match self {
             #[cfg(feature = "sqlx")]
             ApiError::SqlxError => StatusCode::INTERNAL_SERVER_ERROR,
+            #[cfg(feature = "redis")]
+            ApiError::RedisError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::ServicePanicked(_)
             | ApiError::MessageFetchFailed
             | ApiError::AuthTokenGenerationFailed
@@ -140,6 +146,8 @@ impl Into<u32> for &ApiError {
         match self {
             #[cfg(feature = "sqlx")]
             ApiError::SqlxError => 50000,
+            #[cfg(feature = "redis")]
+            ApiError::RedisError => 50000,
             ApiError::CacheGetFailed
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
