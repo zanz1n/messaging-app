@@ -6,54 +6,14 @@ use axum::{
 };
 use serde::{Serialize, Serializer};
 
-#[derive(Debug, Serialize)]
-pub struct ErrorResponse {
-    pub message: String,
-    pub error_code: u32,
-    #[serde(skip_serializing)]
-    pub status_code: StatusCode,
-}
-
-impl ErrorResponse {
-    #[inline]
-    pub fn new(message: String, error_code: u32, status_code: StatusCode) -> Self {
-        Self {
-            message,
-            error_code,
-            status_code,
-        }
-    }
-}
-
-impl IntoResponse for ErrorResponse {
-    fn into_response(self) -> axum::response::Response {
-        let tuple = match serde_json::to_vec(&self) {
-            Ok(buf) => (
-                self.status_code,
-                [(
-                    header::CONTENT_TYPE,
-                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
-                )],
-                buf,
-            ),
-            Err(_) => (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                [(
-                    header::CONTENT_TYPE,
-                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
-                )],
-                ENCODING_FAILED_BODY.to_vec(),
-            ),
-        };
-
-        tuple.into_response()
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
 pub enum ApiError {
     #[error("Server service panicked: {0:?}")]
     ServicePanicked(Option<String>),
+
+    #[cfg(feature = "sqlx")]
+    #[error("Something went wrong while fetching the data")]
+    SqlxError,
 
     #[error("Websocket packets must be sent every {0} seconds")]
     /// The amount of seconds between a packet acknowledgement
@@ -136,6 +96,8 @@ impl Into<StatusCode> for &ApiError {
     #[inline]
     fn into(self) -> StatusCode {
         match self {
+            #[cfg(feature = "sqlx")]
+            ApiError::SqlxError => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::ServicePanicked(_)
             | ApiError::MessageFetchFailed
             | ApiError::AuthTokenGenerationFailed
@@ -176,6 +138,8 @@ impl Into<u32> for &ApiError {
     #[inline]
     fn into(self) -> u32 {
         match self {
+            #[cfg(feature = "sqlx")]
+            ApiError::SqlxError => 50000,
             ApiError::CacheGetFailed
             | ApiError::CacheSetFailed
             | ApiError::CacheDeserializationFailed
@@ -208,6 +172,50 @@ impl Into<u32> for &ApiError {
             ApiError::ChannelFetchFailed => 50005,
             ApiError::ChannelPermissionDenied => 40303,
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ErrorResponse {
+    pub message: String,
+    pub error_code: u32,
+    #[serde(skip_serializing)]
+    pub status_code: StatusCode,
+}
+
+impl ErrorResponse {
+    #[inline]
+    pub fn new(message: String, error_code: u32, status_code: StatusCode) -> Self {
+        Self {
+            message,
+            error_code,
+            status_code,
+        }
+    }
+}
+
+impl IntoResponse for ErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        let tuple = match serde_json::to_vec(&self) {
+            Ok(buf) => (
+                self.status_code,
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
+                )],
+                buf,
+            ),
+            Err(_) => (
+                StatusCode::INTERNAL_SERVER_ERROR,
+                [(
+                    header::CONTENT_TYPE,
+                    HeaderValue::from_static(mime::APPLICATION_JSON.as_ref()),
+                )],
+                ENCODING_FAILED_BODY.to_vec(),
+            ),
+        };
+
+        tuple.into_response()
     }
 }
 

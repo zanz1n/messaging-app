@@ -61,15 +61,6 @@ impl UserRepository for InMemoryUserRepository {
         Ok(None)
     }
 
-    async fn auth_by_email(&self, email: String, password: String) -> Result<bool, ApiError> {
-        let user = self
-            .get_by_email(email)
-            .await?
-            .ok_or(ApiError::UserNotFound)?;
-
-        Ok(user.password == password)
-    }
-
     async fn create(&self, role: UserRole, data: UserCreateData) -> Result<User, ApiError> {
         let id = Uuid::new_v4();
 
