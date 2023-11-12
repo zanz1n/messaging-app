@@ -1,3 +1,21 @@
+use crate::{
+    auth::handlers::AuthHandlers,
+    channel::handlers::ChannelHandlers,
+    http::AppData,
+    message::handlers::MessageHandlers,
+    setup::{env_param, JsonPanicHandler},
+};
+use axum::{routing, Extension, Router, Server};
+use chrono::Utc;
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
+use std::{error::Error, net::SocketAddr, time::Instant};
+use tower_http::{catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer};
+use tracing_subscriber::EnvFilter;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 mod auth;
 mod cache;
 mod channel;
@@ -10,31 +28,23 @@ mod messaging;
 mod setup;
 mod user;
 
-#[cfg(feature = "postgres-redis-repository")]
-mod impls {}
-
-#[cfg(not(feature = "postgres-redis-repository"))]
-mod impls {
-    pub type UserRepo = crate::user::memory_repository::InMemoryUserRepository;
-    pub type CacheRepo = crate::cache::memory_repository::InMemoryCacheRepository;
-    pub type AuthRepo = crate::auth::jwt_repository::JwtAuthRepository<CacheRepo>;
-    pub type MessageRepo = crate::message::memory_repository::InMemoryMessageRepository;
-    pub type ChannelRepo = crate::channel::memory_repository::InMemoryChannelRepository;
-}
-
-use crate::{
-    auth::handlers::AuthHandlers,
-    channel::handlers::ChannelHandlers,
-    http::AppData,
-    impls::*,
-    message::handlers::MessageHandlers,
-    setup::{env_param, JsonPanicHandler},
-};
-use axum::{routing, Extension, Router, Server};
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
-use std::{error::Error, net::SocketAddr};
-use tower_http::{catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer};
-use tracing_subscriber::EnvFilter;
+#[cfg(feature = "postgres")]
+pub type UserRepo = crate::user::postgres_repository::PostgresUserRepository;
+#[cfg(not(feature = "postgres"))]
+pub type UserRepo = crate::user::memory_repository::InMemoryUserRepository;
+#[cfg(feature = "postgres")]
+pub type MessageRepo = crate::message::memory_repository::InMemoryMessageRepository;
+#[cfg(not(feature = "postgres"))]
+pub type MessageRepo = crate::message::memory_repository::InMemoryMessageRepository;
+#[cfg(feature = "postgres")]
+pub type ChannelRepo = crate::channel::memory_repository::InMemoryChannelRepository;
+#[cfg(not(feature = "postgres"))]
+pub type ChannelRepo = crate::channel::memory_repository::InMemoryChannelRepository;
+#[cfg(feature = "redis")]
+pub type CacheRepo = crate::cache::redis_repository::RedisCacheRepository;
+#[cfg(not(feature = "redis"))]
+pub type CacheRepo = crate::cache::memory_repository::InMemoryCacheRepository;
+pub type AuthRepo = crate::auth::jwt_repository::JwtAuthRepository<CacheRepo>;
 
 pub type BoxedError = Box<dyn Error + Send + Sync>;
 
@@ -135,7 +145,74 @@ async fn body() -> Result<(), BoxedError> {
         );
 
     #[cfg(feature = "postgres-redis-repository")]
-    {}
+    {
+        use crate::{
+            auth::jwt_repository::JwtAuthRepository, cache::redis_repository::RedisCacheRepository,
+            user::postgres_repository::PostgresUserRepository,
+        };
+        use deadpool_redis::{Config, Runtime};
+        use sqlx::postgres::PgPoolOptions;
+        use std::time::Duration;
+
+        let jwt_token_duration = env_param("APP_JWT_DURATION").unwrap_or(3600_u64);
+        let jwt_key = env_param::<String>("APP_JWT_KEY")?;
+        let bcrypt_cost = env_param("APP_BCRYPT_COST").unwrap_or(bcrypt::DEFAULT_COST);
+        let database_url = env_param::<String>("DATABASE_URL")?;
+        let max_open_conns = env_param("DATABASE_MAX_CONNS").unwrap_or(12_u32);
+        let min_open_conns = env_param("DATABASE_MIN_CONNS").unwrap_or(5_u32);
+        let db_acquire_timeout = env_param("DATABASE_ACQUIRE_TIMEOUT").unwrap_or(8_u64);
+        let redis_url = env_param::<String>("REDIS_URL")?;
+
+        let pg_start = Instant::now();
+
+        let redis_pool = Config::from_url(redis_url).create_pool(Some(Runtime::Tokio1))?;
+
+        let pool = PgPoolOptions::new()
+            .after_connect(|conn, meta| {
+                Box::pin(async move {
+                    let version = conn.server_version_num();
+                    tracing::info!(
+                        pg_version = version,
+                        age = format!("{}ms", meta.age.as_millis()),
+                        idle_for = format!("{}ms", meta.idle_for.as_millis()),
+                        "Opened postgres conn"
+                    );
+                    Ok(())
+                })
+            })
+            .max_connections(max_open_conns)
+            .min_connections(min_open_conns)
+            .acquire_timeout(Duration::from_secs(db_acquire_timeout))
+            .connect(&database_url)
+            .await?;
+
+        tracing::info!(
+            took = format!("{}ms", (Instant::now() - pg_start).as_millis()),
+            "Connected to postgres"
+        );
+
+        let user_repo = PostgresUserRepository::new(pool, bcrypt_cost);
+        let cache_repo = RedisCacheRepository::new(redis_pool);
+        let auth_repo = JwtAuthRepository::new(
+            Algorithm::HS512,
+            EncodingKey::from_base64_secret(&jwt_key)?,
+            DecodingKey::from_base64_secret(&jwt_key)?,
+            jwt_token_duration,
+            cache_repo,
+        );
+        let message_repo = MessageRepo::new();
+        let channel_repo = ChannelRepo::new();
+
+        let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
+        let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
+        let channel_handlers = ChannelHandlers::new(channel_repo);
+
+        app = app
+            .layer(AppData::extension(auth_handlers))
+            .layer(AppData::extension(message_handlers))
+            .layer(AppData::extension(channel_handlers))
+            .layer(Extension(auth_repo));
+    }
 
     #[cfg(not(feature = "postgres-redis-repository"))]
     {
@@ -169,7 +246,7 @@ async fn body() -> Result<(), BoxedError> {
             .layer(AppData::extension(auth_handlers))
             .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(channel_handlers))
-            .layer(Extension(auth_repo))
+            .layer(Extension(auth_repo));
     }
 
     app = app
@@ -196,9 +273,16 @@ async fn body() -> Result<(), BoxedError> {
 }
 
 fn main() -> Result<(), BoxedError> {
-    tokio::runtime::Builder::new_multi_thread()
+    tokio::runtime::Builder::new_current_thread()
         .enable_all()
+        .thread_stack_size(1024 * (1 << 20))
+        .thread_name_fn(|| {
+            let mut s = Utc::now().to_rfc3339();
+            s.push_str("-tokio-worker-thread");
+
+            s
+        })
         .build()
-        .expect("Failed building the Runtime")
+        .expect("Failed building the tokio Runtime")
         .block_on(body())
 }
