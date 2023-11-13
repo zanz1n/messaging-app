@@ -9,3 +9,5 @@ CREATE TABLE "users" (
     "role" "userrole" NOT NULL DEFAULT 'COMMON',
     "password" varchar(60) NOT NULL
 );
+
+CREATE UNIQUE INDEX "users_email_idx" ON "users"("email");
