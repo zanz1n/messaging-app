@@ -90,7 +90,7 @@ mod sqlx {
     {
         #[inline]
         fn encode_by_ref(&self, buf: &mut <DB as HasArguments<'e>>::ArgumentBuffer) -> IsNull {
-            Encode::<'e, DB>::encode(self, buf)
+            Encode::<'e, DB>::encode(self.to_upper_enum(), buf)
         }
 
         #[inline]
