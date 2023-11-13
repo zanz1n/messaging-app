@@ -6,9 +6,8 @@ use crate::{
     setup::{env_param, JsonPanicHandler},
 };
 use axum::{routing, Extension, Router, Server};
-use chrono::Utc;
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
-use std::{error::Error, net::SocketAddr, time::Instant};
+use std::{error::Error, net::SocketAddr};
 use tower_http::{catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer};
 use tracing_subscriber::EnvFilter;
 
@@ -150,9 +149,9 @@ async fn body() -> Result<(), BoxedError> {
             auth::jwt_repository::JwtAuthRepository, cache::redis_repository::RedisCacheRepository,
             user::postgres_repository::PostgresUserRepository,
         };
-        use deadpool_redis::{Config, Runtime};
+        use deadpool_redis::{redis::cmd, Config, Runtime};
         use sqlx::postgres::PgPoolOptions;
-        use std::time::Duration;
+        use std::time::{Duration, Instant};
 
         let jwt_token_duration = env_param("APP_JWT_DURATION").unwrap_or(3600_u64);
         let jwt_key = env_param::<String>("APP_JWT_KEY")?;
@@ -163,9 +162,20 @@ async fn body() -> Result<(), BoxedError> {
         let db_acquire_timeout = env_param("DATABASE_ACQUIRE_TIMEOUT").unwrap_or(8_u64);
         let redis_url = env_param::<String>("REDIS_URL")?;
 
-        let pg_start = Instant::now();
+        let redis_start = Instant::now();
 
         let redis_pool = Config::from_url(redis_url).create_pool(Some(Runtime::Tokio1))?;
+        {
+            let mut conn = redis_pool.get().await?;
+            cmd("PING").query_async::<_, ()>(&mut conn).await?;
+        }
+
+        tracing::info!(
+            took = format!("{}ms", (Instant::now() - redis_start).as_millis()),
+            "Connected to redis"
+        );
+
+        let pg_start = Instant::now();
 
         let pool = PgPoolOptions::new()
             .after_connect(|conn, meta| {
@@ -275,13 +285,6 @@ async fn body() -> Result<(), BoxedError> {
 fn main() -> Result<(), BoxedError> {
     tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .thread_stack_size(1024 * (1 << 20))
-        .thread_name_fn(|| {
-            let mut s = Utc::now().to_rfc3339();
-            s.push_str("-tokio-worker-thread");
-
-            s
-        })
         .build()
         .expect("Failed building the tokio Runtime")
         .block_on(body())
