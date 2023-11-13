@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 impl Type<Postgres> for UserRole {
     fn type_info() -> PgTypeInfo {
-        PgTypeInfo::with_name("UserRole")
+        PgTypeInfo::with_name("userrole")
     }
 }
 
@@ -109,7 +109,7 @@ impl UserRepository for PostgresUserRepository {
         .fetch_one(&self.pool)
         .await
         .map_err(|e| {
-            if matches!(e, sqlx::Error::Database(_)) {
+            if let sqlx::Error::Database(_) = e {
                 ApiError::UserAlreadyExists
             } else {
                 tracing::error!(
