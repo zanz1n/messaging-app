@@ -45,6 +45,12 @@ pub enum ApiError {
     MessagingSendError,
     #[error("Something went wrong")]
     MessagingRecvError,
+    #[error("Something went wrong")]
+    MessagingConnAcquireFailed,
+    #[error("Something went wrong")]
+    MessagingSubscribeFailed,
+    #[error("Something went wrong")]
+    MessagingUnsubscribeFailed,
 
     #[error("The message could not be found")]
     MessageNotFound,
@@ -116,6 +122,9 @@ impl Into<StatusCode> for &ApiError {
             | ApiError::MessagingSerializationFailed
             | ApiError::MessagingSendError
             | ApiError::MessagingRecvError
+            | ApiError::MessagingConnAcquireFailed
+            | ApiError::MessagingSubscribeFailed
+            | ApiError::MessagingUnsubscribeFailed
             | ApiError::AuthBcryptHashFailed
             | ApiError::ChannelFetchFailed => StatusCode::INTERNAL_SERVER_ERROR,
             ApiError::GatewayTimeout(_) => StatusCode::REQUEST_TIMEOUT,
@@ -156,6 +165,9 @@ impl Into<u32> for &ApiError {
             | ApiError::MessagingSerializationFailed
             | ApiError::MessagingSendError
             | ApiError::MessagingRecvError
+            | ApiError::MessagingConnAcquireFailed
+            | ApiError::MessagingSubscribeFailed
+            | ApiError::MessagingUnsubscribeFailed
             | ApiError::AuthBcryptHashFailed => 50000,
             ApiError::ServicePanicked(_) => 50001,
             ApiError::GatewayTimeout(_) => 40801,
