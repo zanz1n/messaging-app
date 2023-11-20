@@ -1,11 +1,12 @@
 use super::repository::{Entry, MessagingConnection, MessagingRepository};
 use crate::errors::ApiError;
 use async_trait::async_trait;
+use std::collections::HashSet;
 use tokio::sync::broadcast::{Receiver, Sender};
 
 pub struct InMemoryMessagingConnection {
     recv: Receiver<Entry>,
-    sub: Vec<String>,
+    sub: HashSet<String>,
 }
 
 impl InMemoryMessagingConnection {
@@ -13,7 +14,7 @@ impl InMemoryMessagingConnection {
     fn new(recv: Receiver<Entry>) -> Self {
         Self {
             recv,
-            sub: Vec::new(),
+            sub: HashSet::new(),
         }
     }
 }
@@ -21,7 +22,12 @@ impl InMemoryMessagingConnection {
 #[async_trait]
 impl MessagingConnection for InMemoryMessagingConnection {
     async fn subscribe(&mut self, key: String) -> Result<(), ApiError> {
-        self.sub.push(key);
+        self.sub.insert(key);
+        Ok(())
+    }
+
+    async fn unsubscribe(&mut self, key: String) -> Result<(), ApiError> {
+        self.sub.remove(&key);
 
         Ok(())
     }

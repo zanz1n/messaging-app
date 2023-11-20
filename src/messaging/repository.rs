@@ -18,6 +18,8 @@ pub struct SerdeEntry<T> {
 pub trait MessagingConnection: Sync + Send {
     async fn subscribe(&mut self, key: String) -> Result<(), ApiError>;
 
+    async fn unsubscribe(&mut self, key: String) -> Result<(), ApiError>;
+
     async fn recv(&mut self) -> Result<Option<Entry>, ApiError>;
 
     async fn de_recv<D: DeserializeOwned>(&mut self) -> Result<Option<SerdeEntry<D>>, ApiError> {
