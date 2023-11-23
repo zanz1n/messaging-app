@@ -1,6 +1,7 @@
 use crate::{
     auth::handlers::AuthHandlers,
     channel::handlers::ChannelHandlers,
+    gateway::handlers::ws_upgrader,
     http::AppData,
     message::handlers::MessageHandlers,
     setup::{env_param, JsonPanicHandler},
@@ -74,6 +75,10 @@ async fn body() -> Result<(), BoxedError> {
     let mut app = Router::new();
 
     app = app
+        .route(
+            "/gateway",
+            routing::get(ws_upgrader::<EventRepo, AuthRepo, ChannelRepo>),
+        )
         .route(
             "/auth/signin",
             routing::post(handlers::post_auth_signin::<AuthRepo, UserRepo>),
@@ -151,9 +156,10 @@ async fn body() -> Result<(), BoxedError> {
     {
         use crate::{
             auth::jwt_repository::JwtAuthRepository, cache::redis_repository::RedisCacheRepository,
+            event::redis_repository::RedisEventRepository,
             user::postgres_repository::PostgresUserRepository,
         };
-        use deadpool_redis::{redis::cmd, Config, Runtime};
+        use deadpool_redis::{redis::cmd, Config, Connection, Runtime};
         use sqlx::postgres::PgPoolOptions;
         use std::time::{Duration, Instant};
 
@@ -206,7 +212,7 @@ async fn body() -> Result<(), BoxedError> {
         );
 
         let user_repo = PostgresUserRepository::new(pool, bcrypt_cost);
-        let cache_repo = RedisCacheRepository::new(redis_pool);
+        let cache_repo = RedisCacheRepository::new(redis_pool.clone());
         let auth_repo = JwtAuthRepository::new(
             Algorithm::HS512,
             EncodingKey::from_base64_secret(&jwt_key)?,
@@ -216,6 +222,11 @@ async fn body() -> Result<(), BoxedError> {
         );
         let message_repo = MessageRepo::new();
         let channel_repo = ChannelRepo::new();
+        let event_repo = RedisEventRepository::new(
+            Connection::take(redis_pool.get().await?).into_pubsub(),
+            redis_pool.get().await?,
+        )
+        .await?;
 
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
         let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
@@ -225,6 +236,7 @@ async fn body() -> Result<(), BoxedError> {
             .layer(AppData::extension(auth_handlers))
             .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(channel_handlers))
+            .layer(AppData::extension(event_repo))
             .layer(Extension(auth_repo));
     }
 
@@ -233,6 +245,9 @@ async fn body() -> Result<(), BoxedError> {
         use crate::{
             auth::jwt_repository::JwtAuthRepository,
             cache::memory_repository::InMemoryCacheRepository,
+            channel::memory_repository::InMemoryChannelRepository,
+            event::memory_repository::InMemoryEventRepository,
+            message::memory_repository::InMemoryMessageRepository,
             user::memory_repository::InMemoryUserRepository,
         };
 
@@ -249,8 +264,9 @@ async fn body() -> Result<(), BoxedError> {
             jwt_token_duration,
             cache_repo,
         );
-        let message_repo = MessageRepo::new();
-        let channel_repo = ChannelRepo::new();
+        let message_repo = InMemoryMessageRepository::new();
+        let channel_repo = InMemoryChannelRepository::new();
+        let event_repo = InMemoryEventRepository::new();
 
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
         let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
@@ -260,6 +276,7 @@ async fn body() -> Result<(), BoxedError> {
             .layer(AppData::extension(auth_handlers))
             .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(channel_handlers))
+            .layer(AppData::extension(event_repo))
             .layer(Extension(auth_repo));
     }
 

@@ -12,6 +12,6 @@ use uuid::Uuid;
 pub enum AppEvent {
     MessageCreated(Message),
     MessageUpdated(Message),
-    MessageDelete(Uuid),
+    MessageDeleted { id: Uuid, channel: Uuid },
     UserInvalidated(Uuid, InvalidationReason),
 }
