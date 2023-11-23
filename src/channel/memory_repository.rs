@@ -141,7 +141,7 @@ impl ChannelRepository for InMemoryChannelRepository {
         Ok(())
     }
 
-    async fn get_user_permisson(
+    async fn get_user_permission(
         &self,
         user_id: Uuid,
         channel_id: Uuid,

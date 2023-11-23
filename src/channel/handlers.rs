@@ -74,7 +74,7 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
     ) -> Result<DataResponse<Channel>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_read_msg() {
@@ -121,7 +121,7 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
     ) -> Result<DataResponse<UserPermissionEntry>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_update_chan() {
@@ -152,7 +152,7 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
     ) -> Result<DataResponse<Channel>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_update_chan() {
@@ -170,7 +170,7 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
     ) -> Result<DataResponse<()>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_delete_chan() {

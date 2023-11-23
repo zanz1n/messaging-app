@@ -23,7 +23,7 @@ pub trait ChannelRepository: Sync + Send {
         perm: UserPermission,
     ) -> Result<(), ApiError>;
 
-    async fn get_user_permisson(
+    async fn get_user_permission(
         &self,
         user_id: Uuid,
         channel_id: Uuid,

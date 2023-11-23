@@ -69,7 +69,7 @@ where
     ) -> Result<DataResponse<Message>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_read_msg() {
@@ -96,7 +96,7 @@ where
     ) -> Result<DataResponse<Vec<Message>>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_read_msg() {
@@ -119,7 +119,7 @@ where
     ) -> Result<DataResponse<Message>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_send_msg() {
@@ -146,7 +146,7 @@ where
     ) -> Result<DataResponse<Message>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         if !perm.can_send_msg() {
@@ -177,7 +177,7 @@ where
     ) -> Result<DataResponse<()>, ApiError> {
         let perm = self
             .channel_repo
-            .get_user_permisson(auth.sub, path.channel_id)
+            .get_user_permission(auth.sub, path.channel_id)
             .await?;
 
         let msg = match self.message_repo.get_by_id(path.message_id).await? {
