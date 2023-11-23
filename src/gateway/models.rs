@@ -12,7 +12,9 @@ use uuid::Uuid;
 pub enum GatewayEvent {
     MessageCreated(Message),
     MessageUpdated(Message),
-    MessageDelete { id: Uuid },
+    MessageDeleted { id: Uuid },
+    ChannelDeleted { id: Uuid },
+    ChannelCreated { id: Uuid },
     Error(ApiError),
     Pong,
 }
