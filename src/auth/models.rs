@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::fmt::Display;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,6 +27,16 @@ pub enum InvalidationReason {
     Requested,
     PasswordChanged,
     Deleted,
+}
+
+impl Display for InvalidationReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            InvalidationReason::Requested => "REQUESTED",
+            InvalidationReason::PasswordChanged => "PASSWORD_CHANGED",
+            InvalidationReason::Deleted => "DELETED",
+        })
+    }
 }
 
 impl UserAuthPayload {
