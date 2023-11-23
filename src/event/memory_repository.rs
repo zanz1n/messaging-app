@@ -23,6 +23,7 @@ impl EventConnection for InMemoryEventConnection {
     }
 }
 
+#[derive(Clone)]
 pub struct InMemoryEventRepository {
     sender: Sender<AppEvent>,
 }

@@ -8,7 +8,7 @@ pub trait EventConnection {
 }
 
 #[async_trait]
-pub trait EventRepository {
+pub trait EventRepository: Sync + Send {
     type Connection: EventConnection;
 
     async fn get_conn(&self) -> Result<Self::Connection, ApiError>;

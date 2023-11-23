@@ -30,7 +30,7 @@ impl EventConnection for RedisEventConnection {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone)]
 pub struct RedisEventRepository {
     sub_sender: Sender<AppEvent>,
     pub_sender: Sender<AppEvent>,
