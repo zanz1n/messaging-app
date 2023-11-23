@@ -146,19 +146,30 @@ pub async fn ws_handler<EC: EventConnection, C: ChannelRepository>(
                                 send_event(&mut socket, &GatewayEvent::MessageUpdated(msg)).await
                             }
                         }
+                        AppEvent::MessageDeleted { id, channel_id } => {
+                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, channel_id).await
+                            {
+                                send_event(
+                                    &mut socket,
+                                    &GatewayEvent::MessageDeleted { id, channel_id },
+                                )
+                                .await
+                            }
+                        }
                         AppEvent::ChannelDeleted(id) => {
                             if can_read_incomming_msg(&channel_repo, auth_payload.sub, id).await {
                                 send_event(&mut socket, &GatewayEvent::ChannelDeleted { id }).await
                             }
                         }
-                        AppEvent::ChannelCreated(id) => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, id).await {
-                                send_event(&mut socket, &GatewayEvent::ChannelCreated { id }).await
+                        AppEvent::ChannelUserAddedIn { id, user_id } => {
+                            if user_id == auth_payload.sub {
+                                send_event(&mut socket, &GatewayEvent::ChannelUserAddedIn { id }).await
                             }
                         }
-                        AppEvent::MessageDeleted { id, channel } => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, channel).await {
-                                send_event(&mut socket, &GatewayEvent::MessageDeleted { id }).await
+                        AppEvent::ChannelUserRemovedFrom { id, user_id } => {
+                            if user_id == auth_payload.sub {
+                                send_event(&mut socket, &GatewayEvent::ChannelUserRemovedFrom { id })
+                                    .await
                             }
                         }
                         AppEvent::UserInvalidated(id, reason) => {
