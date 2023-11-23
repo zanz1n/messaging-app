@@ -19,11 +19,11 @@ mod auth;
 mod cache;
 mod channel;
 mod errors;
+mod event;
 mod gateway;
 mod handlers;
 mod http;
 mod message;
-mod messaging;
 mod setup;
 mod user;
 
@@ -43,6 +43,10 @@ pub type ChannelRepo = crate::channel::memory_repository::InMemoryChannelReposit
 pub type CacheRepo = crate::cache::redis_repository::RedisCacheRepository;
 #[cfg(not(feature = "redis"))]
 pub type CacheRepo = crate::cache::memory_repository::InMemoryCacheRepository;
+#[cfg(feature = "redis")]
+pub type EventRepo = crate::event::redis_repository::RedisEventRepository;
+#[cfg(not(feature = "redis"))]
+pub type EventRepo = crate::event::memory_repository::InMemoryEventRepository;
 pub type AuthRepo = crate::auth::jwt_repository::JwtAuthRepository<CacheRepo>;
 
 pub type BoxedError = Box<dyn Error + Send + Sync>;
