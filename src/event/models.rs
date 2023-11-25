@@ -1,4 +1,6 @@
-use crate::{auth::models::InvalidationReason, message::models::Message};
+use crate::{
+    auth::models::InvalidationReason, channel::models::ChannelUpdateData, message::models::Message,
+};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -16,5 +18,6 @@ pub enum AppEvent {
     ChannelDeleted(Uuid),
     ChannelUserAddedIn { id: Uuid, user_id: Uuid },
     ChannelUserRemovedFrom { id: Uuid, user_id: Uuid },
+    ChannelUpdated(Uuid, ChannelUpdateData),
     UserInvalidated(Uuid, InvalidationReason),
 }

@@ -172,6 +172,12 @@ pub async fn ws_handler<EC: EventConnection, C: ChannelRepository>(
                                     .await
                             }
                         }
+                        AppEvent::ChannelUpdated(id, data) => {
+                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, id).await {
+                                send_event(&mut socket, &GatewayEvent::ChannelUpdated { id, data })
+                                    .await
+                            }
+                        }
                         AppEvent::UserInvalidated(id, reason) => {
                             if id == auth_payload.sub {
                                 tracing::info!(

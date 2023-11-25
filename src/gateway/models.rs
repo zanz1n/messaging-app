@@ -1,4 +1,4 @@
-use crate::{errors::ApiError, message::models::Message};
+use crate::{channel::models::ChannelUpdateData, errors::ApiError, message::models::Message};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -16,6 +16,7 @@ pub enum GatewayEvent {
     ChannelDeleted { id: Uuid },
     ChannelUserAddedIn { id: Uuid },
     ChannelUserRemovedFrom { id: Uuid },
+    ChannelUpdated { id: Uuid, data: ChannelUpdateData },
     Error(ApiError),
     Pong,
 }
