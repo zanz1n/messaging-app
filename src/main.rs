@@ -97,31 +97,31 @@ async fn body() -> Result<(), BoxedError> {
         )
         .route(
             "/channel/:channel_id",
-            routing::get(handlers::get_channel_id::<ChannelRepo, AuthRepo>),
+            routing::get(handlers::get_channel_id::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channels/self",
-            routing::get(handlers::get_channels_self::<ChannelRepo, AuthRepo>),
+            routing::get(handlers::get_channels_self::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel",
-            routing::post(handlers::post_channel::<ChannelRepo, AuthRepo>),
+            routing::post(handlers::post_channel::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id/permission",
-            routing::put(handlers::put_channel_id_permission::<ChannelRepo, AuthRepo>),
+            routing::put(handlers::put_channel_id_permission::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id",
-            routing::put(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
+            routing::put(handlers::put_channel_id::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id",
-            routing::patch(handlers::put_channel_id::<ChannelRepo, AuthRepo>),
+            routing::patch(handlers::put_channel_id::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id",
-            routing::delete(handlers::delete_channel_id::<ChannelRepo, AuthRepo>),
+            routing::delete(handlers::delete_channel_id::<ChannelRepo, AuthRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id/message/:message_id",
@@ -230,7 +230,7 @@ async fn body() -> Result<(), BoxedError> {
 
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
         let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
-        let channel_handlers = ChannelHandlers::new(channel_repo);
+        let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
 
         app = app
             .layer(AppData::extension(auth_handlers))
@@ -270,7 +270,7 @@ async fn body() -> Result<(), BoxedError> {
 
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
         let message_handlers = MessageHandlers::new(message_repo, channel_repo.clone());
-        let channel_handlers = ChannelHandlers::new(channel_repo);
+        let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
 
         app = app
             .layer(AppData::extension(auth_handlers))

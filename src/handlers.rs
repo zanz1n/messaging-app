@@ -10,6 +10,7 @@ use crate::{
         repository::ChannelRepository,
     },
     errors::ApiError,
+    event::repository::EventRepository,
     http::{AppData, DataResponse, Json},
     message::{
         handlers::{
@@ -69,76 +70,82 @@ where
     data.handle_invalidate(auth).await
 }
 
-pub async fn get_channel_id<C, A>(
+pub async fn get_channel_id<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Path(path): Path<crate::channel::handlers::ChannelIdPathParams>,
 ) -> Result<DataResponse<Channel>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_get_one(auth, path).await
 }
 
-pub async fn get_channels_self<C, A>(
+pub async fn get_channels_self<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Query(query): Query<crate::channel::handlers::GetManyQueryParams>,
 ) -> Result<DataResponse<Vec<Channel>>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_get_many_self(auth, query).await
 }
 
-pub async fn post_channel<C, A>(
+pub async fn post_channel<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Json(body): Json<ChannelCreateData>,
 ) -> Result<DataResponse<Channel>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_create(auth, body).await
 }
 
-pub async fn put_channel_id_permission<C, A>(
+pub async fn put_channel_id_permission<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Path(path): Path<crate::channel::handlers::ChannelIdPathParams>,
     Json(body): Json<AddPermissionRequestBody>,
 ) -> Result<DataResponse<UserPermissionEntry>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_edit_user_permission(auth, path, body).await
 }
 
-pub async fn put_channel_id<C, A>(
+pub async fn put_channel_id<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Path(path): Path<crate::channel::handlers::ChannelIdPathParams>,
     Json(body): Json<ChannelUpdateData>,
 ) -> Result<DataResponse<Channel>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_update(auth, path, body).await
 }
 
-pub async fn delete_channel_id<C, A>(
+pub async fn delete_channel_id<C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<ChannelHandlers<C>>,
+    AppData(data): AppData<ChannelHandlers<C, E>>,
     Path(path): Path<crate::channel::handlers::ChannelIdPathParams>,
 ) -> Result<DataResponse<()>, ApiError>
 where
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_delete(auth, path).await
 }

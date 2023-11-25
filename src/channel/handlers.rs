@@ -2,7 +2,12 @@ use super::{
     models::{Channel, ChannelCreateData, ChannelUpdateData, UserPermission, UserPermissionEntry},
     repository::ChannelRepository,
 };
-use crate::{auth::models::UserAuthPayload, errors::ApiError, http::DataResponse};
+use crate::{
+    auth::models::UserAuthPayload,
+    errors::ApiError,
+    event::{models::AppEvent, repository::EventRepository},
+    http::DataResponse,
+};
 use axum::http::StatusCode;
 use serde::Deserialize;
 use uuid::Uuid;
@@ -58,13 +63,17 @@ pub struct AddPermissionRequestBody {
     permission: AddPermissionVariant,
 }
 
-pub struct ChannelHandlers<C: ChannelRepository> {
+pub struct ChannelHandlers<C: ChannelRepository, E: EventRepository> {
     channel_repo: C,
+    event_repo: E,
 }
 
-impl<C: ChannelRepository> ChannelHandlers<C> {
-    pub fn new(channel_repo: C) -> Self {
-        Self { channel_repo }
+impl<C: ChannelRepository, E: EventRepository> ChannelHandlers<C, E> {
+    pub fn new(channel_repo: C, event_repo: E) -> Self {
+        Self {
+            channel_repo,
+            event_repo,
+        }
     }
 
     pub async fn handle_get_one(
@@ -108,7 +117,18 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
         auth: UserAuthPayload,
         body: ChannelCreateData,
     ) -> Result<DataResponse<Channel>, ApiError> {
-        let chan = self.channel_repo.create(auth.sub, body).await?;
+        let chan = self.channel_repo.create(auth.sub, body.clone()).await?;
+
+        if let Some(users) = body.init_users {
+            for user_id in users {
+                self.event_repo
+                    .publish(AppEvent::ChannelUserAddedIn {
+                        id: chan.id,
+                        user_id,
+                    })
+                    .await?;
+            }
+        }
 
         Ok(chan.into())
     }
@@ -132,9 +152,32 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
         }
 
         let perm: UserPermission = body.permission.into();
-        self.channel_repo
-            .set_user_permission(path.channel_id, body.user_id, perm.clone())
+        let before_permission = self
+            .channel_repo
+            .get_user_permission(body.user_id, path.channel_id)
             .await?;
+
+        if before_permission != perm {
+            self.channel_repo
+                .set_user_permission(path.channel_id, body.user_id, perm.clone())
+                .await?;
+
+            if before_permission == UserPermission::None && perm != UserPermission::None {
+                self.event_repo
+                    .publish(AppEvent::ChannelUserAddedIn {
+                        id: path.channel_id,
+                        user_id: body.user_id,
+                    })
+                    .await?;
+            } else if before_permission != UserPermission::None && perm == UserPermission::None {
+                self.event_repo
+                    .publish(AppEvent::ChannelUserRemovedFrom {
+                        id: path.channel_id,
+                        user_id: body.user_id,
+                    })
+                    .await?;
+            }
+        }
 
         Ok(UserPermissionEntry {
             channel_id: path.channel_id,
@@ -158,7 +201,14 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
         if !perm.can_update_chan() {
             return Err(ApiError::ChannelPermissionDenied);
         }
-        let chan = self.channel_repo.update(path.channel_id, body).await?;
+        let chan = self
+            .channel_repo
+            .update(path.channel_id, body.clone())
+            .await?;
+
+        self.event_repo
+            .publish(AppEvent::ChannelUpdated(chan.id, body))
+            .await?;
 
         Ok(chan.into())
     }
@@ -176,7 +226,20 @@ impl<C: ChannelRepository> ChannelHandlers<C> {
         if !perm.can_delete_chan() {
             return Err(ApiError::ChannelPermissionDenied);
         }
+
         self.channel_repo.delete(path.channel_id).await?;
+
+        _ = self
+            .event_repo
+            .publish(AppEvent::ChannelDeleted(path.channel_id))
+            .await
+            .map_err(|e| {
+                tracing::error!(
+                    error = e.to_string(),
+                    channel_id = path.channel_id.to_string(),
+                    "Faield to publish channel delete event"
+                );
+            });
 
         Ok(DataResponse {
             data: (),
