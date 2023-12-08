@@ -150,22 +150,23 @@ where
     data.handle_delete(auth, path).await
 }
 
-pub async fn get_channel_id_message_id<M, C, A>(
+pub async fn get_channel_id_message_id<M, C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C>>,
+    AppData(data): AppData<MessageHandlers<M, C, E>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
 ) -> Result<DataResponse<Message>, ApiError>
 where
     M: MessageRepository + 'static,
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_get_one(auth, path).await
 }
 
-pub async fn get_channel_id_messages<M, C, A>(
+pub async fn get_channel_id_messages<M, C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C>>,
+    AppData(data): AppData<MessageHandlers<M, C, E>>,
     Path(path): Path<ChannelIdPathParams>,
     Query(query): Query<GetManyQueryParams>,
 ) -> Result<DataResponse<Vec<Message>>, ApiError>
@@ -173,13 +174,14 @@ where
     M: MessageRepository + 'static,
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_get_many(auth, path, query).await
 }
 
-pub async fn post_channel_id_message<M, C, A>(
+pub async fn post_channel_id_message<M, C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C>>,
+    AppData(data): AppData<MessageHandlers<M, C, E>>,
     Path(path): Path<ChannelIdPathParams>,
     Json(body): Json<MessageCreateData>,
 ) -> Result<DataResponse<Message>, ApiError>
@@ -187,13 +189,14 @@ where
     M: MessageRepository + 'static,
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_create(auth, path, body).await
 }
 
-pub async fn put_channel_id_message_id<M, C, A>(
+pub async fn put_channel_id_message_id<M, C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C>>,
+    AppData(data): AppData<MessageHandlers<M, C, E>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
     Json(body): Json<MessageUpdateData>,
 ) -> Result<DataResponse<Message>, ApiError>
@@ -201,19 +204,21 @@ where
     M: MessageRepository + 'static,
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_update(auth, path, body).await
 }
 
-pub async fn delete_channel_id_message_id<M, C, A>(
+pub async fn delete_channel_id_message_id<M, C, A, E>(
     AuthExtractor(auth, _): AuthExtractor<A>,
-    AppData(data): AppData<MessageHandlers<M, C>>,
+    AppData(data): AppData<MessageHandlers<M, C, E>>,
     Path(path): Path<ChannelIdMessageIdPathParams>,
 ) -> Result<DataResponse<()>, ApiError>
 where
     M: MessageRepository + 'static,
     C: ChannelRepository + 'static,
     A: AuthRepository + 'static,
+    E: EventRepository + 'static,
 {
     data.handle_delete(auth, path).await
 }

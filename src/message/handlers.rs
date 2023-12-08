@@ -3,7 +3,10 @@ use super::{
     repository::MessageRepository,
 };
 use crate::{
-    auth::models::UserAuthPayload, channel::repository::ChannelRepository, errors::ApiError,
+    auth::models::UserAuthPayload,
+    channel::repository::ChannelRepository,
+    errors::ApiError,
+    event::{models::AppEvent, repository::EventRepository},
     http::DataResponse,
 };
 use axum::http::StatusCode;
@@ -41,24 +44,28 @@ pub struct ChannelIdPathParams {
     pub channel_id: Uuid,
 }
 
-pub struct MessageHandlers<M, C>
+pub struct MessageHandlers<M, C, E>
 where
     M: MessageRepository,
     C: ChannelRepository,
+    E: EventRepository,
 {
     message_repo: M,
     channel_repo: C,
+    event_repo: E,
 }
 
-impl<M, C> MessageHandlers<M, C>
+impl<M, C, E> MessageHandlers<M, C, E>
 where
     M: MessageRepository,
     C: ChannelRepository,
+    E: EventRepository,
 {
-    pub fn new(message_repo: M, channel_repo: C) -> Self {
+    pub fn new(message_repo: M, channel_repo: C, event_repo: E) -> Self {
         Self {
             message_repo,
             channel_repo,
+            event_repo,
         }
     }
 
@@ -131,6 +138,10 @@ where
             .create(auth.sub, path.channel_id, body)
             .await?;
 
+        self.event_repo
+            .publish(AppEvent::MessageCreated(msg.clone()))
+            .await?;
+
         if msg.channel_id != path.channel_id {
             return Err(ApiError::MessageNotFound);
         }
@@ -167,6 +178,10 @@ where
         }
         let msg = self.message_repo.update(msg.id, body).await?;
 
+        self.event_repo
+            .publish(AppEvent::MessageUpdated(msg.clone()))
+            .await?;
+
         Ok(msg.into())
     }
 
@@ -193,6 +208,13 @@ where
         }
 
         self.message_repo.delete(path.message_id).await?;
+
+        self.event_repo
+            .publish(AppEvent::MessageDeleted {
+                id: path.message_id,
+                channel_id: path.channel_id,
+            })
+            .await?;
 
         Ok(DataResponse {
             data: (),
