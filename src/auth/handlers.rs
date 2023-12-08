@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{
     errors::ApiError,
+    event::{models::AppEvent, repository::EventRepository},
     http::{ApiResponder, DataResponse},
     user::{
         models::{User, UserCreateData, UserRole},
@@ -48,16 +49,18 @@ impl ApiResponder for InvalidationResponseBody {
     }
 }
 
-pub struct AuthHandlers<A: AuthRepository, U: UserRepository> {
+pub struct AuthHandlers<A: AuthRepository, U: UserRepository, E: EventRepository> {
     auth_repo: A,
     user_repo: U,
+    event_repo: E,
 }
 
-impl<A: AuthRepository, U: UserRepository> AuthHandlers<A, U> {
-    pub fn new(auth_repo: A, user_repo: U) -> Self {
+impl<A: AuthRepository, U: UserRepository, E: EventRepository> AuthHandlers<A, U, E> {
+    pub fn new(auth_repo: A, user_repo: U, event_repo: E) -> Self {
         Self {
             auth_repo,
             user_repo,
+            event_repo,
         }
     }
 
@@ -121,6 +124,10 @@ impl<A: AuthRepository, U: UserRepository> AuthHandlers<A, U> {
 
         self.auth_repo
             .add_invalidation(auth.sub, DEFAULT_REASON)
+            .await?;
+
+        self.event_repo
+            .publish(AppEvent::UserInvalidated(auth.sub, DEFAULT_REASON))
             .await?;
 
         Ok(InvalidationResponseBody {

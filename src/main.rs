@@ -81,19 +81,19 @@ async fn body() -> Result<(), BoxedError> {
         )
         .route(
             "/auth/signin",
-            routing::post(handlers::post_auth_signin::<AuthRepo, UserRepo>),
+            routing::post(handlers::post_auth_signin::<AuthRepo, UserRepo, EventRepo>),
         )
         .route(
             "/auth/signup",
-            routing::post(handlers::post_auth_signup::<AuthRepo, UserRepo>),
+            routing::post(handlers::post_auth_signup::<AuthRepo, UserRepo, EventRepo>),
         )
         .route(
             "/auth/self",
-            routing::get(handlers::get_auth_self::<AuthRepo, UserRepo>),
+            routing::get(handlers::get_auth_self::<AuthRepo, UserRepo, EventRepo>),
         )
         .route(
             "/auth/self/invalidate",
-            routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo>),
+            routing::post(handlers::post_auth_self_invalidate::<AuthRepo, UserRepo, EventRepo>),
         )
         .route(
             "/channel/:channel_id",
@@ -228,7 +228,7 @@ async fn body() -> Result<(), BoxedError> {
         )
         .await?;
 
-        let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
+        let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo, event_repo.clone());
         let message_handlers =
             MessageHandlers::new(message_repo, channel_repo.clone(), event_repo.clone());
         let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
@@ -269,7 +269,7 @@ async fn body() -> Result<(), BoxedError> {
         let channel_repo = InMemoryChannelRepository::new();
         let event_repo = InMemoryEventRepository::new();
 
-        let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo);
+        let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo, event_repo.clone());
         let message_handlers =
             MessageHandlers::new(message_repo, channel_repo.clone(), event_repo.clone());
         let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
