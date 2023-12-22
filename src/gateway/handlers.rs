@@ -1,6 +1,6 @@
 use crate::{
     auth::{http::AuthExtractor, models::UserAuthPayload, repository::AuthRepository},
-    channel::{models::UserPermission, repository::ChannelRepository},
+    channel::repository::ChannelRepository,
     errors::ApiError,
     event::{
         models::AppEvent,
@@ -19,6 +19,7 @@ use axum::{
 };
 use serde::Serialize;
 use std::{
+    collections::HashSet,
     net::SocketAddr,
     sync::Arc,
     time::{Duration, Instant},
@@ -47,22 +48,6 @@ async fn send_message<T: Serialize>(ws: &mut WebSocket, value: &T) -> Result<(),
     ws.send(WsMessage::Text(marshal_json_string(value))).await
 }
 
-async fn can_read_incomming_msg<C: ChannelRepository>(
-    channel_repo: impl AsRef<C>,
-    user_id: Uuid,
-    channel_id: Uuid,
-) -> bool {
-    channel_repo
-        .as_ref()
-        .get_user_permission(user_id, channel_id)
-        .await
-        .unwrap_or_else(|e| {
-            tracing::error!(error = e.to_string(), "Failed to get user permission");
-            UserPermission::None
-        })
-        .can_read_msg()
-}
-
 async fn send_event(ws: &mut WebSocket, value: &GatewayEvent) {
     _ = ws
         .send(WsMessage::Text(marshal_json_string(value)))
@@ -83,6 +68,16 @@ pub async fn ws_handler<EC: EventConnection, C: ChannelRepository>(
     tracing::info!(addr = addr.to_string(), "Incomming gateway connection");
 
     let mut last_ping = Instant::now();
+
+    let mut channels = match channel_repo.get_by_user(auth_payload.sub, 0, 1000).await {
+        Ok(v) => v.iter().map(|msg| msg.id).collect::<HashSet<Uuid>>(),
+        Err(e) => {
+            tracing::error!(error = e.to_string(), "Failed to get user permissions");
+
+            _ = send_event(&mut socket, &GatewayEvent::Error(e)).await;
+            return;
+        }
+    };
 
     let res = loop {
         tokio::select! {
@@ -133,22 +128,17 @@ pub async fn ws_handler<EC: EventConnection, C: ChannelRepository>(
                 match event {
                     Ok(event) => match event {
                         AppEvent::MessageCreated(msg) => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, msg.channel_id)
-                                .await
-                            {
+                            if channels.contains(&msg.channel_id) {
                                 send_event(&mut socket, &GatewayEvent::MessageCreated(msg)).await
                             }
                         }
                         AppEvent::MessageUpdated(msg) => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, msg.channel_id)
-                                .await
-                            {
+                            if channels.contains(&msg.channel_id) {
                                 send_event(&mut socket, &GatewayEvent::MessageUpdated(msg)).await
                             }
                         }
                         AppEvent::MessageDeleted { id, channel_id } => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, channel_id).await
-                            {
+                            if channels.contains(&channel_id) {
                                 send_event(
                                     &mut socket,
                                     &GatewayEvent::MessageDeleted { id, channel_id },
@@ -157,23 +147,29 @@ pub async fn ws_handler<EC: EventConnection, C: ChannelRepository>(
                             }
                         }
                         AppEvent::ChannelDeleted(id) => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, id).await {
+                            if channels.contains(&id) {
                                 send_event(&mut socket, &GatewayEvent::ChannelDeleted { id }).await
                             }
                         }
                         AppEvent::ChannelUserAddedIn { id, user_id } => {
                             if user_id == auth_payload.sub {
-                                send_event(&mut socket, &GatewayEvent::ChannelUserAddedIn { id }).await
+                                channels.insert(id);
+                                send_event(&mut socket, &GatewayEvent::ChannelUserAddedIn { id })
+                                    .await
                             }
                         }
                         AppEvent::ChannelUserRemovedFrom { id, user_id } => {
                             if user_id == auth_payload.sub {
-                                send_event(&mut socket, &GatewayEvent::ChannelUserRemovedFrom { id })
-                                    .await
+                                channels.remove(&id);
+                                send_event(
+                                    &mut socket,
+                                    &GatewayEvent::ChannelUserRemovedFrom { id },
+                                )
+                                .await
                             }
                         }
                         AppEvent::ChannelUpdated(id, data) => {
-                            if can_read_incomming_msg(&channel_repo, auth_payload.sub, id).await {
+                            if channels.contains(&id) {
                                 send_event(&mut socket, &GatewayEvent::ChannelUpdated { id, data })
                                     .await
                             }

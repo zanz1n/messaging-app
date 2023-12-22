@@ -231,13 +231,14 @@ async fn body() -> Result<(), BoxedError> {
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo, event_repo.clone());
         let message_handlers =
             MessageHandlers::new(message_repo, channel_repo.clone(), event_repo.clone());
-        let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
+        let channel_handlers = ChannelHandlers::new(channel_repo.clone(), event_repo.clone());
 
         app = app
             .layer(AppData::extension(auth_handlers))
             .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(channel_handlers))
             .layer(AppData::extension(event_repo))
+            .layer(AppData::extension(channel_repo))
             .layer(Extension(auth_repo));
     }
 
@@ -272,13 +273,14 @@ async fn body() -> Result<(), BoxedError> {
         let auth_handlers = AuthHandlers::new(auth_repo.clone(), user_repo, event_repo.clone());
         let message_handlers =
             MessageHandlers::new(message_repo, channel_repo.clone(), event_repo.clone());
-        let channel_handlers = ChannelHandlers::new(channel_repo, event_repo.clone());
+        let channel_handlers = ChannelHandlers::new(channel_repo.clone(), event_repo.clone());
 
         app = app
             .layer(AppData::extension(auth_handlers))
             .layer(AppData::extension(message_handlers))
             .layer(AppData::extension(channel_handlers))
             .layer(AppData::extension(event_repo))
+            .layer(AppData::extension(channel_repo))
             .layer(Extension(auth_repo));
     }
 
