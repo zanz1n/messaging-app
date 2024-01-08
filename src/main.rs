@@ -6,9 +6,10 @@ use crate::{
     message::handlers::MessageHandlers,
     setup::{env_param, JsonPanicHandler},
 };
-use axum::{routing, Extension, Router, Server};
+use axum::{routing, Extension, Router};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey};
 use std::{error::Error, net::SocketAddr};
+use tokio::net::TcpListener;
 use tower_http::{catch_panic::CatchPanicLayer, normalize_path::NormalizePathLayer};
 use tracing_subscriber::EnvFilter;
 
@@ -298,12 +299,16 @@ async fn body() -> Result<(), BoxedError> {
         app = setup_app_cors(app);
     }
 
-    let server = Server::try_bind(&SocketAddr::from(([0, 0, 0, 0], port)))?;
+    let listener = TcpListener::bind(&SocketAddr::from(([0, 0, 0, 0], port))).await?;
+
     tracing::info!(port, "Server listenning");
 
-    server
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
+
     Ok(())
 }
 

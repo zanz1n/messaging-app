@@ -38,9 +38,9 @@ tokio = { version = "1", features = ["full"] }
 tokio-stream = "0.1"
 dotenvy = { version = "0.15", optional = true }
 
-axum = { version = "0.6", features = ["tracing", "ws"] }
-tower-http = { version = "0.4", features = ["normalize-path", "catch-panic"] }
-tokio-tungstenite = "0.20"
+axum = { version = "0.7", features = ["tracing", "ws"] }
+tower-http = { version = "0.5", features = ["normalize-path", "catch-panic"] }
+tokio-tungstenite = "0.21"
 
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -67,7 +67,7 @@ sqlx = { version = "0.7", optional = true, features = [
     "uuid",
 ] }
 
-deadpool-redis = { version = "0.13", optional = true, features = [
+deadpool-redis = { version = "0.14", optional = true, features = [
     "rt_tokio_1",
 ] }
 

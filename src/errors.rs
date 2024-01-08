@@ -1,6 +1,6 @@
 use crate::ENCODING_FAILED_BODY;
 use axum::{
-    body::BoxBody,
+    body::Body,
     http::{header, HeaderValue, Response, StatusCode},
     response::IntoResponse,
 };
@@ -259,7 +259,7 @@ impl From<ApiError> for ErrorResponse {
 
 impl IntoResponse for ApiError {
     #[inline]
-    fn into_response(self) -> Response<BoxBody> {
+    fn into_response(self) -> Response<Body> {
         ErrorResponse::new(self.to_string(), (&self).into(), (&self).into()).into_response()
     }
 }

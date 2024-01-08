@@ -1,5 +1,5 @@
 use crate::errors::ApiError;
-use axum::{body::BoxBody, http::Response, response::IntoResponse};
+use axum::{body::Body, http::Response, response::IntoResponse};
 use std::{
     env,
     fmt::{Debug, Display},
@@ -11,7 +11,7 @@ use tower_http::catch_panic::ResponseForPanic;
 pub struct JsonPanicHandler;
 
 impl ResponseForPanic for JsonPanicHandler {
-    type ResponseBody = BoxBody;
+    type ResponseBody = Body;
 
     fn response_for_panic(
         &mut self,

@@ -72,7 +72,7 @@ impl CacheRepository for RedisCacheRepository {
         let mut conn = self.acquire_conn().await?;
         let key = key.to_string();
 
-        conn.set_ex(key, value, ttl as usize).await.map_err(|e| {
+        conn.set_ex(key, value, ttl).await.map_err(|e| {
             tracing::error!(error = e.to_string(), operation = "SET", "Redis error");
             ApiError::RedisError
         })
